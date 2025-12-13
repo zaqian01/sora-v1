@@ -1,110 +1,152 @@
+--========================================
+-- SORA v1 | Fly + NoClip
+--========================================
+
 local Players = game:GetService("Players")
+local UIS = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
+
 local player = Players.LocalPlayer
 local char = player.Character or player.CharacterAdded:Wait()
 local hrp = char:WaitForChild("HumanoidRootPart")
 
--- AUTO CENTER (POSISI KAMU SAAT EXECUTE)
-local center = hrp.Position
-local R = 15 -- jarak totem dari center (ubah kalau perlu)
+--========================================
+-- STATE
+--========================================
+local FlyEnabled = false
+local NoClipEnabled = false
+local FlySpeed = 60
 
--- 12 POSISI TOTEM (3D)
-local points = {
-	Vector3.new( R,  0,  0),
-	Vector3.new(-R,  0,  0),
-	Vector3.new( 0,  0,  R),
-	Vector3.new( 0,  0, -R),
-	Vector3.new( 0,  R,  0),
-	Vector3.new( 0, -R,  0),
+local BV, BG
 
-	Vector3.new( R,  R,  0),
-	Vector3.new(-R,  R,  0),
-	Vector3.new( 0,  R,  R),
-	Vector3.new( 0,  R, -R),
+--========================================
+-- FLY FUNCTIONS
+--========================================
+local function StartFly()
+	if BV then return end
 
-	Vector3.new( R, -R,  0),
-	Vector3.new(-R, -R,  0),
-}
+	BG = Instance.new("BodyGyro")
+	BG.P = 9e4
+	BG.MaxTorque = Vector3.new(9e9,9e9,9e9)
+	BG.CFrame = hrp.CFrame
+	BG.Parent = hrp
 
+	BV = Instance.new("BodyVelocity")
+	BV.MaxForce = Vector3.new(9e9,9e9,9e9)
+	BV.Parent = hrp
+
+	RunService:BindToRenderStep("SoraFly", 200, function()
+		if not FlyEnabled then return end
+
+		local cam = workspace.CurrentCamera
+		local dir = Vector3.zero
+
+		if UIS:IsKeyDown(Enum.KeyCode.W) then dir += cam.CFrame.LookVector end
+		if UIS:IsKeyDown(Enum.KeyCode.S) then dir -= cam.CFrame.LookVector end
+		if UIS:IsKeyDown(Enum.KeyCode.A) then dir -= cam.CFrame.RightVector end
+		if UIS:IsKeyDown(Enum.KeyCode.D) then dir += cam.CFrame.RightVector end
+		if UIS:IsKeyDown(Enum.KeyCode.Space) then dir += Vector3.new(0,1,0) end
+		if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then dir -= Vector3.new(0,1,0) end
+
+		BV.Velocity = dir.Magnitude > 0 and dir.Unit * FlySpeed or Vector3.zero
+		BG.CFrame = cam.CFrame
+	end)
+end
+
+local function StopFly()
+	RunService:UnbindFromRenderStep("SoraFly")
+	if BV then BV:Destroy() BV = nil end
+	if BG then BG:Destroy() BG = nil end
+end
+
+--========================================
+-- NOCLIP
+--========================================
+RunService.Stepped:Connect(function()
+	if not NoClipEnabled then return end
+	for _,v in pairs(char:GetDescendants()) do
+		if v:IsA("BasePart") then
+			v.CanCollide = false
+		end
+	end
+end)
+
+--========================================
 -- UI
+--========================================
 local gui = Instance.new("ScreenGui", player.PlayerGui)
 gui.ResetOnSpawn = false
 
 local main = Instance.new("Frame", gui)
-main.Size = UDim2.new(0, 260, 0, 260)
-main.Position = UDim2.new(0.05, 0, 0.35, 0)
+main.Size = UDim2.new(0,260,0,170)
+main.Position = UDim2.new(0.05,0,0.4,0)
 main.BackgroundColor3 = Color3.fromRGB(20,20,25)
 main.BorderSizePixel = 0
 main.Active = true
 main.Draggable = true
 
--- TOP BAR
 local top = Instance.new("Frame", main)
-top.Size = UDim2.new(1, 0, 0, 30)
+top.Size = UDim2.new(1,0,0,30)
 top.BackgroundColor3 = Color3.fromRGB(15,15,20)
 top.BorderSizePixel = 0
 
 local title = Instance.new("TextLabel", top)
-title.Size = UDim2.new(1, -40, 1, 0)
-title.Position = UDim2.new(0, 10, 0, 0)
 title.Text = "Sora v1"
-title.TextColor3 = Color3.new(1,1,1)
+title.Size = UDim2.new(1,-40,1,0)
+title.Position = UDim2.new(0,10,0,0)
 title.BackgroundTransparency = 1
+title.TextColor3 = Color3.new(1,1,1)
 title.Font = Enum.Font.SourceSansBold
 title.TextSize = 14
-title.TextXAlignment = Enum.TextXAlignment.Left
+title.TextXAlignment = Left
 
-local minBtn = Instance.new("TextButton", top)
-minBtn.Size = UDim2.new(0, 30, 0, 22)
-minBtn.Position = UDim2.new(1, -35, 0, 4)
-minBtn.Text = "-"
-minBtn.Font = Enum.Font.SourceSansBold
-minBtn.TextSize = 18
-minBtn.TextColor3 = Color3.new(1,1,1)
-minBtn.BackgroundColor3 = Color3.fromRGB(40,40,45)
-minBtn.BorderSizePixel = 0
+local min = Instance.new("TextButton", top)
+min.Text = "-"
+min.Size = UDim2.new(0,30,0,22)
+min.Position = UDim2.new(1,-35,0,4)
+min.BackgroundColor3 = Color3.fromRGB(40,40,45)
+min.TextColor3 = Color3.new(1,1,1)
+min.BorderSizePixel = 0
 
--- CONTENT
-local content = Instance.new("Frame", main)
-content.Position = UDim2.new(0, 0, 0, 30)
-content.Size = UDim2.new(1, 0, 1, -30)
-content.BackgroundTransparency = 1
+local body = Instance.new("Frame", main)
+body.Position = UDim2.new(0,0,0,30)
+body.Size = UDim2.new(1,0,1,-30)
+body.BackgroundTransparency = 1
 
-local layout = Instance.new("UIGridLayout", content)
-layout.CellSize = UDim2.new(0, 110, 0, 30)
-layout.CellPadding = UDim2.new(0, 10, 0, 10)
-layout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-layout.VerticalAlignment = Enum.VerticalAlignment.Center
-
--- BUTTON TOTEM
-for i = 1, 12 do
-	local btn = Instance.new("TextButton")
-	btn.Parent = content
-	btn.Text = "Totem "..i
-	btn.BackgroundColor3 = Color3.fromRGB(55,55,55)
-	btn.TextColor3 = Color3.new(1,1,1)
-	btn.BorderSizePixel = 0
-	btn.Font = Enum.Font.SourceSans
-	btn.TextSize = 14
-
-	btn.MouseButton1Click:Connect(function()
-		hrp.CFrame = CFrame.new(center + points[i])
-	end)
+-- BUTTON CREATOR
+local function MakeButton(text, y)
+	local b = Instance.new("TextButton", body)
+	b.Size = UDim2.new(0.8,0,0,30)
+	b.Position = UDim2.new(0.1,0,y,0)
+	b.Text = text
+	b.BackgroundColor3 = Color3.fromRGB(45,45,50)
+	b.TextColor3 = Color3.new(1,1,1)
+	b.BorderSizePixel = 0
+	return b
 end
 
--- MINIMIZE LOGIC
+local FlyBtn = MakeButton("Fly : OFF", 0.15)
+local NoClipBtn = MakeButton("NoClip : OFF", 0.45)
+
+-- BUTTON LOGIC
+FlyBtn.MouseButton1Click:Connect(function()
+	FlyEnabled = not FlyEnabled
+	FlyBtn.Text = FlyEnabled and "Fly : ON" or "Fly : OFF"
+	if FlyEnabled then StartFly() else StopFly() end
+end)
+
+NoClipBtn.MouseButton1Click:Connect(function()
+	NoClipEnabled = not NoClipEnabled
+	NoClipBtn.Text = NoClipEnabled and "NoClip : ON" or "NoClip : OFF"
+end)
+
+-- MINIMIZE
 local minimized = false
 local normalSize = main.Size
 
-minBtn.MouseButton1Click:Connect(function()
+min.MouseButton1Click:Connect(function()
 	minimized = not minimized
-
-	if minimized then
-		content.Visible = false
-		main.Size = UDim2.new(0, 260, 0, 30)
-		minBtn.Text = "+"
-	else
-		content.Visible = true
-		main.Size = normalSize
-		minBtn.Text = "-"
-	end
+	body.Visible = not minimized
+	main.Size = minimized and UDim2.new(0,260,0,30) or normalSize
+	min.Text = minimized and "+" or "-"
 end)
