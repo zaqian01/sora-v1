@@ -1,4 +1,4 @@
--- SORA V1 | Main (Relative Teleport Version) - UI & Proper Fly Updated
+-- SORA V1 | Main (Relative Teleport Version) - UI Structure FIXED
 -- Bunny Executor Ready
 
 local Players = game:GetService("Players")
@@ -7,6 +7,10 @@ local RunService = game:GetService("RunService")
 
 local player = Players.LocalPlayer
 local DIST = 50
+local HEADER_HEIGHT = 30
+local INFO_HEIGHT = 65
+local INITIAL_HEIGHT = 480
+local FRAME_WIDTH = 300
 
 -- ===== UTILS =====
 local function HRP()
@@ -20,33 +24,39 @@ local function teleport(offset)
     hrp.CFrame = hrp.CFrame + offset
 end
 
--- ===== GUI (KOREKSI LAYOUT) =====
+-- ===== GUI (STRUCTURE FIXED) =====
 local gui = Instance.new("ScreenGui", player.PlayerGui)
-gui.Name = "SoraV1_Updated"
+gui.Name = "SoraV1_Fixed"
 
+-- 1. MainFrame (Frame utama yang draggable)
 local frame = Instance.new("Frame", gui)
-frame.Size = UDim2.fromOffset(300, 480) -- Ukuran Frame awal
+frame.Size = UDim2.fromOffset(FRAME_WIDTH, INITIAL_HEIGHT)
 frame.Position = UDim2.fromOffset(200, 200)
 frame.BackgroundColor3 = Color3.fromRGB(22,22,22)
 frame.Active = true
 frame.Draggable = true
 frame.BorderSizePixel = 0
-frame.ClipsDescendants = false -- Pastikan tidak ada yang terpotong secara tidak sengaja
+frame.ClipsDescendants = true -- Agar elemen di luar batas frame tersembunyi
 
+-- 2. Header (Title Bar)
 local title = Instance.new("TextLabel", frame)
-title.Size = UDim2.new(1,0,0,30)
+title.Name = "Header"
+title.Size = UDim2.new(1,0,0,HEADER_HEIGHT)
 title.Text = "SORA V1 | Bunny Executor"
 title.TextColor3 = Color3.fromRGB(0,255,180)
 title.BackgroundColor3 = Color3.fromRGB(30,30,30)
 title.Font = Enum.Font.Code
 title.BorderSizePixel = 0
 
--- Container untuk semua tombol dan info di bawah title
+-- 3. ContentFrame (Container untuk semua tombol dan info)
 local contentFrame = Instance.new("Frame", frame)
-contentFrame.Size = UDim2.new(1,0,1,-30) -- Ambil sisa ruang Frame (Frame.Size - Title.Height)
-contentFrame.Position = UDim2.fromOffset(0, 30) -- Posisikan di bawah Title
+contentFrame.Name = "ContentFrame"
+-- Size: Lebar penuh, Tinggi = Frame Total - Tinggi Header
+contentFrame.Size = UDim2.new(1,0,1,-HEADER_HEIGHT)
+contentFrame.Position = UDim2.fromOffset(0, HEADER_HEIGHT) -- Posisikan tepat di bawah Header
 contentFrame.BackgroundTransparency = 1
 
+-- UIListLayout hanya di ContentFrame!
 local list = Instance.new("UIListLayout", contentFrame)
 list.Padding = UDim.new(0,6)
 list.HorizontalAlignment = Enum.HorizontalAlignment.Center
@@ -55,10 +65,10 @@ list.FillDirection = Enum.FillDirection.Vertical
 list.VerticalAlignment = Enum.VerticalAlignment.Top
 
 
--- Function to create buttons
+-- Function to create buttons (ditempatkan di ContentFrame)
 local function btn(text, cb)
     local b = Instance.new("TextButton", contentFrame)
-    b.Size = UDim2.fromOffset(280,35)
+    b.Size = UDim2.fromOffset(FRAME_WIDTH - 20,35) -- Lebih kecil dari frame untuk padding 10px
     b.Text = text
     b.BackgroundColor3 = Color3.fromRGB(40,40,40)
     b.TextColor3 = Color3.new(1,1,1)
@@ -68,9 +78,10 @@ local function btn(text, cb)
     return b
 end
 
--- ===== COORDINATE DISPLAY & FPS COUNTER (TOP/INFO SECTION) =====
+-- 4. InfoFrame (FPS & Koordinat)
 local infoFrame = Instance.new("Frame", contentFrame)
-infoFrame.Size = UDim2.fromOffset(280, 65)
+infoFrame.Name = "InfoFrame"
+infoFrame.Size = UDim2.fromOffset(FRAME_WIDTH - 20, INFO_HEIGHT)
 infoFrame.BackgroundTransparency = 1
 infoFrame.LayoutOrder = 1 -- Paling atas di ContentFrame
 
@@ -98,14 +109,14 @@ fpsLabel.Text = "FPS: 0"
 local last = tick()
 
 local separator = Instance.new("Frame", contentFrame) -- Visual Separator
-separator.Size = UDim2.fromOffset(280, 2)
+separator.Size = UDim2.fromOffset(FRAME_WIDTH - 20, 2)
 separator.BackgroundColor3 = Color3.fromRGB(60,60,60)
 separator.LayoutOrder = 2
 
 -- Main Buttons start here
 local buttonStartOrder = 3 
 
--- ===== RELATIVE TELEPORT BUTTONS =====
+-- ===== RELATIVE TELEPORT BUTTONS (LOGIC UNCHANGED) =====
 btn("TP Forward (+Z)", function()
     local hrp = HRP()
     if hrp then teleport(hrp.CFrame.LookVector * DIST) end
@@ -140,7 +151,7 @@ btn("TP Down (-Y)", function()
 end).LayoutOrder = buttonStartOrder
 buttonStartOrder = buttonStartOrder + 1
 
--- ===== PROPER FLY LOGIC (MODIFIED) =====
+-- ===== PROPER FLY (LOGIC UNCHANGED) =====
 local fly = false
 local speed = 60
 local bv, bg
@@ -172,7 +183,7 @@ btn("Fly ON / OFF", function()
     
     local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
     if hum then
-        hum.PlatformStand = fly -- Pastikan Humanoid berada dalam PlatformStand
+        hum.PlatformStand = fly 
     end
 
     if fly then
@@ -234,12 +245,12 @@ buttonStartOrder = buttonStartOrder + 1
 local minimized = false
 btn("Minimize UI", function()
     minimized = not minimized
-    frame.Size = minimized and UDim2.fromOffset(300,40) or UDim2.fromOffset(300, 480) -- Sesuaikan ukuran minimized
+    frame.Size = minimized and UDim2.fromOffset(FRAME_WIDTH, HEADER_HEIGHT) or UDim2.fromOffset(FRAME_WIDTH, INITIAL_HEIGHT)
 end).LayoutOrder = buttonStartOrder
 buttonStartOrder = buttonStartOrder + 1
 
 
--- ===== RENDERSTEPPED LOOP (DIGABUNGKAN & LOGIC FLY DIUBAH) =====
+-- ===== RENDERSTEPPED LOOP (LOGIC UNCHANGED) =====
 RunService.RenderStepped:Connect(function()
     -- Proper Fly logic
     if fly and bv and bg then
@@ -253,7 +264,6 @@ RunService.RenderStepped:Connect(function()
         if keys.Space then dir += Vector3.new(0,1,0) end
         if keys.Ctrl then dir -= Vector3.new(0,1,0) end
 
-        -- Normalize vector for consistent speed
         bv.Velocity = dir.Magnitude > 0 and dir.Unit * speed or Vector3.zero
         bg.CFrame = cam.CFrame
     end
@@ -263,7 +273,7 @@ RunService.RenderStepped:Connect(function()
     if hrp then
         local p = hrp.Position
         coord.Text = string.format(
-            "X: %.1f | Y: %.1f | Z: %.1f", -- Format 1 baris untuk estetika UI
+            "X: %.1f | Y: %.1f | Z: %.1f",
             p.X, p.Y, p.Z
         )
     end
