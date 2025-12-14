@@ -1,274 +1,353 @@
--- ===============================================
--- Sora v1 - Core Script (GitHub: zradian01/sora-v1)
--- Mengimplementasikan UI, Fly, NoClip, dan Totem Logic
--- ===============================================
+-- Nama Script: Sora V1 (Bunny Compatible)
+-- Executor: Bunny
 
--- LAYANAN INTI
-local RunService = game:GetService("RunService")
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 local UserInputService = game:GetService("UserInputService")
+local RunService = game:GetService("RunService")
 local Workspace = game:GetService("Workspace")
 
--- KONSTANTA TOTEM (Didasarkan pada Radius R=54 dan Pusat P= (87, 9, 2737))
-local R = 54 -- Radius setiap Totem (unit)
-local P_CENTER_X = 87
-local P_CENTER_Y = 9
-local P_CENTER_Z = 2737
-local PARTIAL_R = 38 -- Digunakan untuk offset diagonal (sekitar R/sqrt(2) untuk distribusi merata)
+-- == Konfigurasi Fitur ==
+local IsFlying = false
+local IsNoClip = false
+local OriginalWalkSpeed = 16 
+local SpeedMultiplier = 2.5 
+local NoClipParts = {} 
+local FlyUpKey = Enum.KeyCode.E 
+local FlyDownKey = Enum.KeyCode.Q 
+local ToggleUIKey = Enum.KeyCode.LeftControl 
+local IsUIHidden = false
 
--- 12 KOORDINAT TOTEM OPTIMAL (Semua berjarak R=54 dari Titik Pusat P)
--- Totem ini harus ditempatkan secara presisi menggunakan fitur Fly/NoClip
-local TOTEM_POSITIONS = {
-    -- 6 Totem di sekitar sumbu X/Z (Lapisan Tengah 2D)
-    Vector3.new(P_CENTER_X + R, P_CENTER_Y, P_CENTER_Z),           -- T1 (+X)
-    Vector3.new(P_CENTER_X - R, P_CENTER_Y, P_CENTER_Z),           -- T2 (-X)
-    Vector3.new(P_CENTER_X, P_CENTER_Y, P_CENTER_Z + R),           -- T3 (+Z)
-    Vector3.new(P_CENTER_X, P_CENTER_Y, P_CENTER_Z - R),           -- T4 (-Z)
-    Vector3.new(P_CENTER_X + PARTIAL_R, P_CENTER_Y, P_CENTER_Z + PARTIAL_R), -- T5 (+X, +Z diagonal)
-    Vector3.new(P_CENTER_X - PARTIAL_R, P_CENTER_Y, P_CENTER_Z - PARTIAL_R), -- T6 (-X, -Z diagonal)
+-- Tunggu Humanoid untuk mendapatkan kecepatan awal
+LocalPlayer.CharacterAdded:Connect(function(char)
+    local humanoid = char:WaitForChild("Humanoid")
+    OriginalWalkSpeed = humanoid.WalkSpeed
+    -- Memastikan kecepatan reset jika perlu
+    if humanoid.WalkSpeed > 16 then
+        humanoid.WalkSpeed = 16
+    end
+end)
 
-    -- 6 Totem untuk 3D Stacking (Lapisan Atas/Bawah & Diagonal)
-    Vector3.new(P_CENTER_X, P_CENTER_Y + R, P_CENTER_Z),           -- T7 (+Y, Totem Udara)
-    Vector3.new(P_CENTER_X, P_CENTER_Y - R, P_CENTER_Z),           -- T8 (-Y, Totem Bawah Tanah)
-    Vector3.new(P_CENTER_X + PARTIAL_R, P_CENTER_Y + PARTIAL_R, P_CENTER_Z), -- T9 (+X, +Y)
-    Vector3.new(P_CENTER_X - PARTIAL_R, P_CENTER_Y - PARTIAL_R, P_CENTER_Z), -- T10 (-X, -Y)
-    Vector3.new(P_CENTER_X, P_CENTER_Y + PARTIAL_R, P_CENTER_Z - PARTIAL_R), -- T11 (+Y, -Z)
-    Vector3.new(P_CENTER_X, P_CENTER_Y - PARTIAL_R, P_CENTER_Z + PARTIAL_R), -- T12 (-Y, +Z)
-}
+-- == Fungsi Utama Fitur ==
 
--- VARIABEL STATUS
-local isFlying = false
-local isNoclipping = false
-local originalGravity = Workspace.Gravity
-local originalWalkSpeed = 16 -- Kecepatan default Roblox
-
--- Fungsi untuk mendapatkan karakter dan HumanoidRootPart (HRP)
-local function getHRP()
-    local character = LocalPlayer.Character
-    if not character then return nil end
-    return character:FindFirstChild("HumanoidRootPart")
-end
-
--- ===============================================
--- 1. FUNGSI NOCLIP
--- ===============================================
-
-local function toggleNoclip()
-    isNoclipping = not isNoclipping
-    local character = LocalPlayer.Character
-    if character and character:FindFirstChild("HumanoidRootPart") then
-        if isNoclipping then
-            -- Set semua part karakter ke CanCollide = false
-            for _, part in ipairs(character:GetDescendants()) do
-                if part:IsA("BasePart") then
-                    part.CanCollide = false
-                end
-            end
-        else
-            -- Reset CanCollide (Perlu dilakukan sekali saja)
-            for _, part in ipairs(character:GetDescendants()) do
-                if part:IsA("BasePart") then
-                    part.CanCollide = true
-                end
+-- A. UI Hider
+local function ToggleAllUI(shouldHide)
+    local CoreGui = game:GetService("CoreGui")
+    local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+    
+    for _, gui in ipairs({PlayerGui, CoreGui}) do
+        for _, child in ipairs(gui:GetChildren()) do
+            -- Abaikan GUI ini (SoraV1Frame) dan CoreGui penting
+            if child.Name ~= "SoraV1Frame" and child:IsA("ScreenGui") then
+                child.Enabled = not shouldHide
             end
         end
     end
 end
 
--- ===============================================
--- 2. FUNGSI FLY (Gerakan 3D Presisi)
--- ===============================================
-
-local function startFly()
-    isFlying = true
-    Workspace.Gravity = 0 -- Nonaktifkan gravitasi
-    LocalPlayer.Character.Humanoid.PlatformStand = true -- Jangan biarkan humanoid bergerak
-    LocalPlayer.Character.Humanoid.WalkSpeed = 0 -- Nonaktifkan gerakan tanah
+-- B. Fly Logic
+local function ToggleFly(state)
+    IsFlying = state
+    local char = LocalPlayer.Character
+    if char and char:FindFirstChildOfClass("Humanoid") then
+        char.Humanoid.PlatformStand = state
+        if not state then
+            char.Humanoid.PlatformStand = false
+        end
+    end
 end
 
-local function stopFly()
-    isFlying = false
-    Workspace.Gravity = originalGravity -- Kembalikan gravitasi
-    LocalPlayer.Character.Humanoid.PlatformStand = false
-    LocalPlayer.Character.Humanoid.WalkSpeed = originalWalkSpeed -- Kembalikan kecepatan
+-- C. No-Clip Logic
+local function ToggleNoClip(state)
+    IsNoClip = state
+    if not state then
+        -- Kembalikan Collide ke semua bagian yang diubah
+        for part in pairs(NoClipParts) do
+            -- Menggunakan pcall untuk keamanan
+            pcall(function() part.CanCollide = true end)
+        end
+        NoClipParts = {}
+    end
 end
 
-local function handleFlyMovement()
-    local root = getHRP()
-    if not root or not isFlying then return end
+-- D. Speed Hack Logic
+local function SetSpeed(state)
+    local humanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
+    if humanoid then
+        if state then
+            humanoid.WalkSpeed = OriginalWalkSpeed * SpeedMultiplier
+        else
+            humanoid.WalkSpeed = OriginalWalkSpeed
+        end
+    end
+end
 
-    local movementVector = Vector3.new(0, 0, 0)
-    local moveSpeed = 2 -- Kecepatan perpindahan (bisa diubah untuk presisi)
+-- == Logic Loop (Heartbeat) ==
 
-    -- Kontrol Gerakan (Sesuai kesepakatan)
-    if UserInputService:IsKeyDown(Enum.KeyCode.W) then movementVector = movementVector + root.CFrame.LookVector end
-    if UserInputService:IsKeyDown(Enum.KeyCode.S) then movementVector = movementVector - root.CFrame.LookVector end
-    if UserInputService:IsKeyDown(Enum.KeyCode.A) then movementVector = movementVector - root.CFrame.RightVector end
-    if UserInputService:IsKeyDown(Enum.KeyCode.D) then movementVector = movementVector + root.CFrame.RightVector end
-    if UserInputService:IsKeyDown(Enum.KeyCode.Space) then movementVector = movementVector + Vector3.new(0, 1, 0) end -- NAIK (Y+)
-    if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then movementVector = movementVector - Vector3.new(0, 1, 0) end -- TURUN (Y-)
+RunService.Heartbeat:Connect(function(dt)
+    local Character = LocalPlayer.Character
+    local Root = Character and Character:FindFirstChild("HumanoidRootPart")
     
-    if movementVector.Magnitude > 0 then
-        root.CFrame = root.CFrame + movementVector.Unit * moveSpeed
+    if not Character or not Root then return end
+    
+    -- Fly Logic Loop
+    if IsFlying then
+        local velocity = Vector3.new(0, 0, 0)
+        
+        -- Cek Input Gerakan WASD
+        if UserInputService:IsKeyDown(Enum.KeyCode.W) then velocity = velocity + Root.CFrame.lookVector * 30 * dt end
+        if UserInputService:IsKeyDown(Enum.KeyCode.S) then velocity = velocity - Root.CFrame.lookVector * 30 * dt end
+        if UserInputService:IsKeyDown(Enum.KeyCode.A) then velocity = velocity - Root.CFrame.rightVector * 30 * dt end
+        if UserInputService:IsKeyDown(Enum.KeyCode.D) then velocity = velocity + Root.CFrame.rightVector * 30 * dt end
+        
+        -- Gerakan Vertikal
+        if UserInputService:IsKeyDown(FlyUpKey) then velocity = velocity + Vector3.new(0, 30 * dt, 0) end
+        if UserInputService:IsKeyDown(FlyDownKey) then velocity = velocity + Vector3.new(0, -30 * dt, 0) end
+        
+        Root.CFrame = Root.CFrame + velocity
+        -- Mencegah gravitasi menarik RootPart
+        Root.AssemblyLinearVelocity = Vector3.new(0,0,0) 
     end
-end
-
--- ===============================================
--- 3. FUNGSI AUTO-TELEPORT
--- ===============================================
-
-local function autoTeleport()
-    local root = getHRP()
-    if not root then return end
-
-    -- Teleport ke Titik Pusat Overlap (P_CENTER)
-    local targetPos = Vector3.new(P_CENTER_X, P_CENTER_Y + 5, P_CENTER_Z) -- Ditambah 5 unit agar tidak tenggelam
-    root.CFrame = CFrame.new(targetPos)
-
-    print("Teleport berhasil ke pusat Overlap 12 Totem.")
-    print(string.format("Pusat Efek: (%.0f, %.0f, %.0f)", P_CENTER_X, P_CENTER_Y, P_CENTER_Z))
-    print("---------------------------------------")
-    print("KOORDINAT 12 TITIK TOTEM UNTUK DITEMPATKAN (Jarak R="..R.." dari pusat):")
-    for i, pos in ipairs(TOTEM_POSITIONS) do
-        print(string.format("Totem %d: (%.0f, %.0f, %.0f)", i, pos.X, pos.Y, pos.Z))
-    end
-    print("---------------------------------------")
-end
-
--- ===============================================
--- 4. SETUP UI MANUAL (Sora v1)
--- ===============================================
-
-local screenGui = Instance.new("ScreenGui")
-screenGui.Name = "SoraV1_GUI"
-screenGui.IgnoreGuiInset = true
-screenGui.Parent = LocalPlayer:WaitForChild("PlayerGui")
-
-local mainFrame = Instance.new("Frame")
-mainFrame.Size = UDim2.new(0, 250, 0, 200)
-mainFrame.Position = UDim2.new(0.5, -125, 0.5, -100) -- Posisi default di tengah
-mainFrame.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
-mainFrame.BorderColor3 = Color3.fromRGB(20, 20, 20)
-mainFrame.BorderSizePixel = 2
-mainFrame.Parent = screenGui
-
--- Title Bar
-local titleLabel = Instance.new("TextLabel")
-titleLabel.Text = "Sora v1"
-titleLabel.Size = UDim2.new(1, 0, 0, 30)
-titleLabel.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
-titleLabel.Font = Enum.Font.SourceSansBold
-titleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-titleLabel.TextSize = 18
-titleLabel.Parent = mainFrame
-
--- UI Drag Functionality
-local isDragging = false
-local dragStartPos = nil
-
-titleLabel.InputBegan:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        isDragging = true
-        dragStartPos = UserInputService:GetMouseLocation() - Vector2.new(mainFrame.AbsolutePosition.X, mainFrame.AbsolutePosition.Y)
-        -- Masukkan Frame ke depan
-        mainFrame:ZIndex(10)
+    
+    -- No-Clip Logic Loop (Bunny/Executor dasar biasanya lebih mengandalkan CanCollide)
+    if IsNoClip then
+        for _, part in ipairs(Character:GetChildren()) do
+            if part:IsA("BasePart") and part.CanCollide == true then
+                pcall(function() part.CanCollide = false end)
+                NoClipParts[part] = true
+            end
+        end
     end
 end)
 
-titleLabel.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType.Touch then
+-- == Keybind untuk Toggle UI Hider ==
+UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
+    if input.KeyCode == ToggleUIKey and not gameProcessedEvent then
+        IsUIHidden = not IsUIHidden
+        ToggleAllUI(IsUIHidden)
+        
+        -- Update tampilan tombol UI Hider
+        local button = MainFrame:FindFirstChild("Sidebar"):FindFirstChild("MiscButton")
+        if button and button:FindFirstChild("HideAllUI(Ctrl)") then
+            local uiButton = button:FindFirstChild("HideAllUI(Ctrl)")
+            uiButton.Text = IsUIHidden and "HIDE UI: ON" or "HIDE UI: OFF"
+            uiButton.BackgroundColor3 = IsUIHidden and Color3.fromRGB(50, 150, 50) or Color3.fromRGB(150, 50, 50)
+        end
+    end
+end)
+
+
+-- ***************************************
+-- == 3. UI Generator (Sora V1 Style) ==
+-- ***************************************
+
+-- ** Setup Dasar Frame **
+local MainFrame = Instance.new("ScreenGui")
+MainFrame.Name = "SoraV1Frame"
+MainFrame.Parent = LocalPlayer:WaitForChild("PlayerGui")
+
+local Frame = Instance.new("Frame")
+Frame.Size = UDim2.new(0, 550, 0, 350)
+Frame.Position = UDim2.new(0.5, -275, 0.5, -175)
+Frame.BackgroundColor3 = Color3.fromRGB(24, 24, 24)
+Frame.BorderSizePixel = 0
+Frame.Parent = MainFrame
+
+local Corner = Instance.new("UICorner")
+Corner.CornerRadius = UDim.new(0, 12)
+Corner.Parent = Frame
+
+-- ** Title Bar (untuk Dragging) **
+local TitleBar = Instance.new("Frame")
+TitleBar.Size = UDim2.new(1, 0, 0, 30)
+TitleBar.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+TitleBar.Parent = Frame
+
+local TitleLabel = Instance.new("TextLabel")
+TitleLabel.Size = UDim2.new(1, -50, 1, 0)
+TitleLabel.Text = "Sora V1 | Bunny Edition"
+TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
+TitleLabel.Font = Enum.Font.SourceSansBold
+TitleLabel.TextSize = 16
+TitleLabel.BackgroundColor3 = Color3.new(0, 0, 0, 0)
+TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
+TitleLabel.Position = UDim2.new(0, 15, 0, 0)
+TitleLabel.Parent = TitleBar
+
+-- ** Minimize Button **
+local MinimizeButton = Instance.new("TextButton")
+MinimizeButton.Size = UDim2.new(0, 20, 0, 20)
+MinimizeButton.Position = UDim2.new(1, -25, 0, 5)
+MinimizeButton.Text = "—"
+MinimizeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+MinimizeButton.Font = Enum.Font.SourceSansBold
+MinimizeButton.TextSize = 18
+MinimizeButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
+MinimizeButton.Parent = TitleBar
+
+-- ** Sidebar/Menu Kiri **
+local Sidebar = Instance.new("Frame")
+Sidebar.Name = "Sidebar"
+Sidebar.Size = UDim2.new(0, 150, 1, -30)
+Sidebar.Position = UDim2.new(0, 0, 0, 30)
+Sidebar.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
+Sidebar.Parent = Frame
+
+local SidebarList = Instance.new("UIListLayout")
+SidebarList.Padding = UDim.new(0, 2)
+SidebarList.Parent = Sidebar
+
+-- ** Content/Halaman Kanan **
+local ContentFrame = Instance.new("Frame")
+ContentFrame.Name = "ContentFrame"
+ContentFrame.Size = UDim2.new(1, -150, 1, -30)
+ContentFrame.Position = UDim2.new(0, 150, 0, 30)
+ContentFrame.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
+ContentFrame.Parent = Frame
+
+local ContentPadding = Instance.new("UIPadding")
+ContentPadding.PaddingTop = UDim.new(0, 10)
+ContentPadding.PaddingBottom = UDim.new(0, 10)
+ContentPadding.PaddingLeft = UDim.new(0, 10)
+ContentPadding.PaddingRight = UDim.new(0, 10)
+ContentPadding.Parent = ContentFrame
+
+local ContentListLayout = Instance.new("UIListLayout")
+ContentListLayout.Padding = UDim.new(0, 10)
+ContentListLayout.Parent = ContentFrame
+
+-- == 4. Helper UI Functions ==
+
+local ActiveTab = nil
+
+-- Helper untuk membuat Tombol Sidebar
+local function createSidebarButton(name)
+    local Button = Instance.new("TextButton")
+    Button.Name = name .. "Button"
+    Button.Size = UDim2.new(1, 0, 0, 40)
+    Button.Text = name
+    Button.TextColor3 = Color3.fromRGB(200, 200, 200)
+    Button.Font = Enum.Font.SourceSansBold
+    Button.TextSize = 16
+    Button.BackgroundColor3 = Color3.new(0, 0, 0, 0)
+    Button.Parent = Sidebar
+    
+    local Page = Instance.new("Frame")
+    Page.Name = name .. "Page"
+    Page.Size = UDim2.new(1, 0, 1, 0)
+    Page.BackgroundColor3 = Color3.new(0, 0, 0, 0)
+    Page.Parent = ContentFrame
+    Page.Visible = false
+    
+    local PageList = Instance.new("UIListLayout")
+    PageList.Padding = UDim.new(0, 5)
+    PageList.Parent = Page
+    
+    Button.MouseButton1Click:Connect(function()
+        for _, child in ipairs(ContentFrame:GetChildren()) do
+            if child:IsA("Frame") and child.Name:match("Page$") then
+                child.Visible = false
+            end
+        end
+        Page.Visible = true
+        
+        -- Update highlight
+        for _, btn in ipairs(Sidebar:GetChildren()) do
+            if btn:IsA("TextButton") then
+                btn.TextColor3 = Color3.fromRGB(200, 200, 200)
+                btn.BackgroundColor3 = Color3.new(0, 0, 0, 0)
+            end
+        end
+        Button.TextColor3 = Color3.fromRGB(255, 255, 255)
+        Button.BackgroundColor3 = Color3.fromRGB(55, 55, 55)
+        ActiveTab = Button
+    end)
+    
+    return Page
+end
+
+-- Helper untuk membuat Tombol Toggle Fitur
+local function createFeatureToggle(parentPage, text, command)
+    local Button = Instance.new("TextButton")
+    Button.Name = text:gsub(" ", ""):gsub("%W", "")
+    Button.Size = UDim2.new(1, 0, 0, 30)
+    Button.Text = text .. ": OFF"
+    Button.TextColor3 = Color3.fromRGB(255, 255, 255)
+    Button.Font = Enum.Font.SourceSans
+    Button.TextSize = 14
+    Button.BackgroundColor3 = Color3.fromRGB(150, 50, 50) -- Merah (OFF)
+    Button.Parent = parentPage
+    
+    local isActive = false
+    
+    Button.MouseButton1Click:Connect(function()
+        isActive = not isActive
+        command(isActive)
+        if isActive then
+            Button.BackgroundColor3 = Color3.fromRGB(50, 150, 50) -- Hijau (ON)
+            Button.Text = text .. ": ON"
+        else
+            Button.BackgroundColor3 = Color3.fromRGB(150, 50, 50) -- Merah (OFF)
+            Button.Text = text .. ": OFF"
+        end
+    end)
+    
+    return Button
+end
+
+-- == 5. Inisialisasi Halaman & Fitur ==
+
+-- Halaman 1: Main (Movement)
+local MainPage = createSidebarButton("Main")
+createFeatureToggle(MainPage, "Fly", ToggleFly)
+createFeatureToggle(MainPage, "No-Clip", ToggleNoClip)
+createFeatureToggle(MainPage, "Speed Hack", SetSpeed)
+
+-- Halaman 2: Misc
+local MiscPage = createSidebarButton("Misc")
+createFeatureToggle(MiscPage, "Hide All UI (Ctrl)", function(state)
+    IsUIHidden = state
+    ToggleAllUI(state)
+end)
+
+-- Halaman default (Main)
+if Sidebar:FindFirstChild("MainButton") then
+    Sidebar:FindFirstChild("MainButton"):Click()
+end
+
+-- ** Dragging Logic **
+local isDragging = false
+local dragStartPos
+TitleBar.MouseButton1Down:Connect(function(x, y)
+    isDragging = true
+    dragStartPos = Vector2.new(x, y) - Vector2.new(Frame.AbsolutePosition.X, Frame.AbsolutePosition.Y)
+end)
+UserInputService.InputChanged:Connect(function(input)
+    if isDragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+        Frame.Position = UDim2.new(0, input.Position.X - dragStartPos.X, 0, input.Position.Y - dragStartPos.Y)
+    end
+end)
+UserInputService.InputEnded:Connect(function(input)
+    if input.UserInputType == Enum.UserInputType.MouseButton1 then
         isDragging = false
     end
 end)
 
-UserInputService.InputChanged:Connect(function(input)
-    if isDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-        local mousePos = UserInputService:GetMouseLocation()
-        mainFrame.Position = UDim2.new(0, mousePos.X - dragStartPos.X, 0, mousePos.Y - dragStartPos.Y)
-    end
-end)
-
--- Minimize Button
-local minimizeButton = Instance.new("TextButton")
-minimizeButton.Text = "—"
-minimizeButton.Size = UDim2.new(0, 30, 0, 30)
-minimizeButton.Position = UDim2.new(1, -30, 0, 0)
-minimizeButton.BackgroundColor3 = Color3.fromRGB(80, 80, 80)
-minimizeButton.Font = Enum.Font.SourceSansBold
-minimizeButton.TextSize = 20
-minimizeButton.Parent = titleLabel
-
-minimizeButton.MouseButton1Click:Connect(function()
-    local isVisible = container.Visible
-    container.Visible = not isVisible
-    mainFrame.Size = UDim2.new(0, 250, 0, isVisible and 30 or 200)
-    minimizeButton.Text = isVisible and "□" or "—"
-end)
-
--- Button Container
-local container = Instance.new("Frame")
-container.Size = UDim2.new(1, -20, 1, -40)
-container.Position = UDim2.new(0, 10, 0, 35)
-container.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-container.Parent = mainFrame
-local layout = Instance.new("UIListLayout")
-layout.Padding = UDim.new(0, 5)
-layout.Parent = container
-
--- Fly Button
-local flyButton = Instance.new("TextButton")
-flyButton.Text = "Toggle Fly (OFF)"
-flyButton.Size = UDim2.new(1, 0, 0, 30)
-flyButton.BackgroundColor3 = Color3.fromRGB(80, 80, 150)
-flyButton.Font = Enum.Font.SourceSansBold
-flyButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-flyButton.Parent = container
-
-flyButton.MouseButton1Click:Connect(function()
-    if isFlying then
-        stopFly()
-        flyButton.Text = "Toggle Fly (OFF)"
-        flyButton.BackgroundColor3 = Color3.fromRGB(80, 80, 150)
+-- ** Minimize Logic **
+local isMinimized = false
+MinimizeButton.MouseButton1Click:Connect(function()
+    isMinimized = not isMinimized
+    if isMinimized then
+        Frame.Size = UDim2.new(0, 550, 0, 30)
+        MinimizeButton.Text = "+"
+        Sidebar.Visible = false
+        ContentFrame.Visible = false
     else
-        startFly()
-        flyButton.Text = "Toggle Fly (ON)"
-        flyButton.BackgroundColor3 = Color3.fromRGB(150, 80, 80)
+        Frame.Size = UDim2.new(0, 550, 0, 350)
+        MinimizeButton.Text = "—"
+        Sidebar.Visible = true
+        ContentFrame.Visible = true
     end
 end)
 
--- NoClip Button
-local noclipButton = Instance.new("TextButton")
-noclipButton.Text = "Toggle NoClip (OFF)"
-noclipButton.Size = UDim2.new(1, 0, 0, 30)
-noclipButton.BackgroundColor3 = Color3.fromRGB(80, 80, 150)
-noclipButton.Font = Enum.Font.SourceSansBold
-noclipButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-noclipButton.Parent = container
-
-noclipButton.MouseButton1Click:Connect(function()
-    toggleNoclip()
-    if isNoclipping then
-        noclipButton.Text = "Toggle NoClip (ON)"
-        noclipButton.BackgroundColor3 = Color3.fromRGB(150, 80, 80)
-    else
-        noclipButton.Text = "Toggle NoClip (OFF)"
-        noclipButton.BackgroundColor3 = Color3.fromRGB(80, 80, 150)
-    end
-end)
-
--- Teleport Button
-local tpButton = Instance.new("TextButton")
-tpButton.Text = "TP ke Pusat Overlap (87, 9, 2737)"
-tpButton.Size = UDim2.new(1, 0, 0, 30)
-tpButton.BackgroundColor3 = Color3.fromRGB(80, 150, 80)
-tpButton.Font = Enum.Font.SourceSansBold
-tpButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-tpButton.Parent = container
-
-tpButton.MouseButton1Click:Connect(autoTeleport)
-
--- RUN LOOP untuk Fly Movement
-RunService.Heartbeat:Connect(handleFlyMovement)
-
-print("Sora v1 - Loader UI dan Movement Aktif.")
+print("Sora V1 (Bunny Edition) berhasil dimuat.")
