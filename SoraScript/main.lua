@@ -1,4 +1,4 @@
--- SORA V1 | Main (Relative Teleport Version) - UI Structure FIXED
+-- SORA V1 | Main (Status Panel Version) - Teleport Removed, UI Enhanced
 -- Bunny Executor Ready
 
 local Players = game:GetService("Players")
@@ -6,10 +6,10 @@ local UIS = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 
 local player = Players.LocalPlayer
-local DIST = 50
-local HEADER_HEIGHT = 30
-local INFO_HEIGHT = 65
-local INITIAL_HEIGHT = 480
+local DIST = 50 -- Meskipun tidak digunakan untuk TP, variabel tetap ada.
+local HEADER_HEIGHT = 35 -- Ditingkatkan
+local INFO_HEIGHT = 70 -- Ditingkatkan
+local INITIAL_HEIGHT = 480 
 local FRAME_WIDTH = 300
 
 -- ===== UTILS =====
@@ -18,15 +18,11 @@ local function HRP()
     return c and c:FindFirstChild("HumanoidRootPart")
 end
 
-local function teleport(offset)
-    local hrp = HRP()
-    if not hrp then return end
-    hrp.CFrame = hrp.CFrame + offset
-end
+-- Fungsi teleport dihapus
 
--- ===== GUI (STRUCTURE FIXED) =====
+-- ===== GUI (STRUCTURE FIXED & ENHANCED) =====
 local gui = Instance.new("ScreenGui", player.PlayerGui)
-gui.Name = "SoraV1_Fixed"
+gui.Name = "SoraV1_Status"
 
 -- 1. MainFrame (Frame utama yang draggable)
 local frame = Instance.new("Frame", gui)
@@ -36,29 +32,28 @@ frame.BackgroundColor3 = Color3.fromRGB(22,22,22)
 frame.Active = true
 frame.Draggable = true
 frame.BorderSizePixel = 0
-frame.ClipsDescendants = true -- Agar elemen di luar batas frame tersembunyi
+frame.ClipsDescendants = true 
 
 -- 2. Header (Title Bar)
 local title = Instance.new("TextLabel", frame)
 title.Name = "Header"
 title.Size = UDim2.new(1,0,0,HEADER_HEIGHT)
-title.Text = "SORA V1 | Bunny Executor"
+title.Text = "SORA V1 "
 title.TextColor3 = Color3.fromRGB(0,255,180)
 title.BackgroundColor3 = Color3.fromRGB(30,30,30)
 title.Font = Enum.Font.Code
+title.TextSize = 18 -- Ditingkatkan
 title.BorderSizePixel = 0
 
 -- 3. ContentFrame (Container untuk semua tombol dan info)
 local contentFrame = Instance.new("Frame", frame)
 contentFrame.Name = "ContentFrame"
--- Size: Lebar penuh, Tinggi = Frame Total - Tinggi Header
 contentFrame.Size = UDim2.new(1,0,1,-HEADER_HEIGHT)
-contentFrame.Position = UDim2.fromOffset(0, HEADER_HEIGHT) -- Posisikan tepat di bawah Header
+contentFrame.Position = UDim2.fromOffset(0, HEADER_HEIGHT) 
 contentFrame.BackgroundTransparency = 1
 
--- UIListLayout hanya di ContentFrame!
 local list = Instance.new("UIListLayout", contentFrame)
-list.Padding = UDim.new(0,6)
+list.Padding = UDim.new(0,8) -- Padding ditingkatkan
 list.HorizontalAlignment = Enum.HorizontalAlignment.Center
 list.SortOrder = Enum.SortOrder.LayoutOrder
 list.FillDirection = Enum.FillDirection.Vertical
@@ -68,22 +63,23 @@ list.VerticalAlignment = Enum.VerticalAlignment.Top
 -- Function to create buttons (ditempatkan di ContentFrame)
 local function btn(text, cb)
     local b = Instance.new("TextButton", contentFrame)
-    b.Size = UDim2.fromOffset(FRAME_WIDTH - 20,35) -- Lebih kecil dari frame untuk padding 10px
+    b.Size = UDim2.fromOffset(FRAME_WIDTH - 20,40) -- Tinggi tombol ditingkatkan
     b.Text = text
     b.BackgroundColor3 = Color3.fromRGB(40,40,40)
     b.TextColor3 = Color3.new(1,1,1)
     b.Font = Enum.Font.SourceSansBold
+    b.TextSize = 18 -- Ditingkatkan
     b.BorderSizePixel = 0
     b.MouseButton1Click:Connect(cb)
     return b
 end
 
--- 4. InfoFrame (FPS & Koordinat)
+-- 4. InfoFrame (FPS & Koordinat) - Status Panel
 local infoFrame = Instance.new("Frame", contentFrame)
 infoFrame.Name = "InfoFrame"
 infoFrame.Size = UDim2.fromOffset(FRAME_WIDTH - 20, INFO_HEIGHT)
 infoFrame.BackgroundTransparency = 1
-infoFrame.LayoutOrder = 1 -- Paling atas di ContentFrame
+infoFrame.LayoutOrder = 1 
 
 local infoList = Instance.new("UIListLayout", infoFrame)
 infoList.HorizontalAlignment = Enum.HorizontalAlignment.Left
@@ -92,23 +88,25 @@ infoList.Padding = UDim.new(0,5)
 
 local coord = Instance.new("TextLabel", infoFrame)
 coord.Size = UDim2.new(1,0,0,30)
-coord.TextColor3 = Color3.fromRGB(0,255,180)
 coord.BackgroundTransparency = 1
 coord.TextWrapped = true
 coord.TextXAlignment = Enum.TextXAlignment.Left
-coord.Font = Enum.Font.Code
-coord.Text = "X: 0.0 | Y: 0.0 | Z: 0.0"
+coord.Text = "POS: X: 0.0 | Y: 0.0 | Z: 0.0"
+coord.TextSize = 16 -- Sesuai permintaan
+coord.Font = Enum.Font.GothamBold -- Sesuai permintaan
+coord.TextColor3 = Color3.fromRGB(220,220,220) -- Sesuai permintaan
 
 local fpsLabel = Instance.new("TextLabel", infoFrame)
-fpsLabel.Size = UDim2.new(1,0,0,20)
-fpsLabel.TextColor3 = Color3.fromRGB(255,255,255)
+fpsLabel.Size = UDim2.new(1,0,0,25) -- Diperbesar
 fpsLabel.BackgroundTransparency = 1
 fpsLabel.TextXAlignment = Enum.TextXAlignment.Left
-fpsLabel.Font = Enum.Font.Code
 fpsLabel.Text = "FPS: 0"
 local last = tick()
+fpsLabel.TextSize = 18 -- Sesuai permintaan
+fpsLabel.Font = Enum.Font.GothamBold -- Sesuai permintaan
+fpsLabel.TextColor3 = Color3.fromRGB(0,255,180) -- Sesuai permintaan
 
-local separator = Instance.new("Frame", contentFrame) -- Visual Separator
+local separator = Instance.new("Frame", contentFrame) 
 separator.Size = UDim2.fromOffset(FRAME_WIDTH - 20, 2)
 separator.BackgroundColor3 = Color3.fromRGB(60,60,60)
 separator.LayoutOrder = 2
@@ -116,40 +114,7 @@ separator.LayoutOrder = 2
 -- Main Buttons start here
 local buttonStartOrder = 3 
 
--- ===== RELATIVE TELEPORT BUTTONS (LOGIC UNCHANGED) =====
-btn("TP Forward (+Z)", function()
-    local hrp = HRP()
-    if hrp then teleport(hrp.CFrame.LookVector * DIST) end
-end).LayoutOrder = buttonStartOrder
-buttonStartOrder = buttonStartOrder + 1
-
-btn("TP Backward (-Z)", function()
-    local hrp = HRP()
-    if hrp then teleport(-hrp.CFrame.LookVector * DIST) end
-end).LayoutOrder = buttonStartOrder
-buttonStartOrder = buttonStartOrder + 1
-
-btn("TP Right (+X)", function()
-    local hrp = HRP()
-    if hrp then teleport(hrp.CFrame.RightVector * DIST) end
-end).LayoutOrder = buttonStartOrder
-buttonStartOrder = buttonStartOrder + 1
-
-btn("TP Left (-X)", function()
-    local hrp = HRP()
-    if hrp then teleport(-hrp.CFrame.RightVector * DIST) end
-end).LayoutOrder = buttonStartOrder
-buttonStartOrder = buttonStartOrder + 1
-
-btn("TP Up (+Y)", function()
-    teleport(Vector3.new(0, DIST, 0))
-end).LayoutOrder = buttonStartOrder
-buttonStartOrder = buttonStartOrder + 1
-
-btn("TP Down (-Y)", function()
-    teleport(Vector3.new(0, -DIST, 0))
-end).LayoutOrder = buttonStartOrder
-buttonStartOrder = buttonStartOrder + 1
+-- LOGIKA TELEPORT DIHAPUS
 
 -- ===== PROPER FLY (LOGIC UNCHANGED) =====
 local fly = false
@@ -268,12 +233,12 @@ RunService.RenderStepped:Connect(function()
         bg.CFrame = cam.CFrame
     end
 
-    -- Coordinate Display logic
+    -- Coordinate Display logic (Status Panel)
     local hrp = HRP()
     if hrp then
         local p = hrp.Position
         coord.Text = string.format(
-            "X: %.1f | Y: %.1f | Z: %.1f",
+            "POS: X: %.1f | Y: %.1f | Z: %.1f", -- Tambahkan label POS
             p.X, p.Y, p.Z
         )
     end
