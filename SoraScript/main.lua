@@ -1,353 +1,185 @@
--- Nama Script: Sora V1 (Bunny Compatible)
--- Executor: Bunny
+-- SORA V1 | Main (Relative Teleport Version)
+-- Bunny Executor Ready
 
 local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-local UserInputService = game:GetService("UserInputService")
+local UIS = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
-local Workspace = game:GetService("Workspace")
 
--- == Konfigurasi Fitur ==
-local IsFlying = false
-local IsNoClip = false
-local OriginalWalkSpeed = 16 
-local SpeedMultiplier = 2.5 
-local NoClipParts = {} 
-local FlyUpKey = Enum.KeyCode.E 
-local FlyDownKey = Enum.KeyCode.Q 
-local ToggleUIKey = Enum.KeyCode.LeftControl 
-local IsUIHidden = false
+local player = Players.LocalPlayer
+local DIST = 50
 
--- Tunggu Humanoid untuk mendapatkan kecepatan awal
-LocalPlayer.CharacterAdded:Connect(function(char)
-    local humanoid = char:WaitForChild("Humanoid")
-    OriginalWalkSpeed = humanoid.WalkSpeed
-    -- Memastikan kecepatan reset jika perlu
-    if humanoid.WalkSpeed > 16 then
-        humanoid.WalkSpeed = 16
-    end
-end)
-
--- == Fungsi Utama Fitur ==
-
--- A. UI Hider
-local function ToggleAllUI(shouldHide)
-    local CoreGui = game:GetService("CoreGui")
-    local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
-    
-    for _, gui in ipairs({PlayerGui, CoreGui}) do
-        for _, child in ipairs(gui:GetChildren()) do
-            -- Abaikan GUI ini (SoraV1Frame) dan CoreGui penting
-            if child.Name ~= "SoraV1Frame" and child:IsA("ScreenGui") then
-                child.Enabled = not shouldHide
-            end
-        end
-    end
+-- ===== UTILS =====
+local function HRP()
+    local c = player.Character
+    return c and c:FindFirstChild("HumanoidRootPart")
 end
 
--- B. Fly Logic
-local function ToggleFly(state)
-    IsFlying = state
-    local char = LocalPlayer.Character
-    if char and char:FindFirstChildOfClass("Humanoid") then
-        char.Humanoid.PlatformStand = state
-        if not state then
-            char.Humanoid.PlatformStand = false
-        end
-    end
+local function teleport(offset)
+    local hrp = HRP()
+    if not hrp then return end
+    hrp.CFrame = hrp.CFrame + offset
 end
 
--- C. No-Clip Logic
-local function ToggleNoClip(state)
-    IsNoClip = state
-    if not state then
-        -- Kembalikan Collide ke semua bagian yang diubah
-        for part in pairs(NoClipParts) do
-            -- Menggunakan pcall untuk keamanan
-            pcall(function() part.CanCollide = true end)
-        end
-        NoClipParts = {}
-    end
+-- ===== GUI =====
+local gui = Instance.new("ScreenGui", player.PlayerGui)
+gui.Name = "SoraV1"
+
+local frame = Instance.new("Frame", gui)
+frame.Size = UDim2.fromOffset(260, 360)
+frame.Position = UDim2.fromOffset(200, 200)
+frame.BackgroundColor3 = Color3.fromRGB(22,22,22)
+frame.Active = true
+frame.Draggable = true
+
+local title = Instance.new("TextLabel", frame)
+title.Size = UDim2.new(1,0,0,30)
+title.Text = "SORA V1"
+title.TextColor3 = Color3.fromRGB(0,255,180)
+title.BackgroundTransparency = 1
+
+local list = Instance.new("UIListLayout", frame)
+list.Padding = UDim.new(0,6)
+
+local function btn(text, cb)
+    local b = Instance.new("TextButton", frame)
+    b.Size = UDim2.fromOffset(240,30)
+    b.Text = text
+    b.BackgroundColor3 = Color3.fromRGB(40,40,40)
+    b.TextColor3 = Color3.new(1,1,1)
+    b.MouseButton1Click:Connect(cb)
 end
 
--- D. Speed Hack Logic
-local function SetSpeed(state)
-    local humanoid = LocalPlayer.Character and LocalPlayer.Character:FindFirstChildOfClass("Humanoid")
-    if humanoid then
-        if state then
-            humanoid.WalkSpeed = OriginalWalkSpeed * SpeedMultiplier
-        else
-            humanoid.WalkSpeed = OriginalWalkSpeed
-        end
-    end
-end
+-- ===== COORDINATE DISPLAY (DIMASUKKAN DI SINI) =====
+local coord = Instance.new("TextLabel", frame)
+coord.Size = UDim2.fromOffset(240, 40)
+coord.TextColor3 = Color3.fromRGB(0,255,180)
+coord.BackgroundTransparency = 1
+coord.TextWrapped = true
 
--- == Logic Loop (Heartbeat) ==
+-- ===== FPS COUNTER (DIMASUKKAN DI SINI) =====
+local fpsLabel = Instance.new("TextLabel", frame)
+fpsLabel.Size = UDim2.fromOffset(240, 20)
+fpsLabel.TextColor3 = Color3.fromRGB(255,255,255)
+fpsLabel.BackgroundTransparency = 1
+local last = tick()
+local fps = 0
 
-RunService.Heartbeat:Connect(function(dt)
-    local Character = LocalPlayer.Character
-    local Root = Character and Character:FindFirstChild("HumanoidRootPart")
-    
-    if not Character or not Root then return end
-    
-    -- Fly Logic Loop
-    if IsFlying then
-        local velocity = Vector3.new(0, 0, 0)
-        
-        -- Cek Input Gerakan WASD
-        if UserInputService:IsKeyDown(Enum.KeyCode.W) then velocity = velocity + Root.CFrame.lookVector * 30 * dt end
-        if UserInputService:IsKeyDown(Enum.KeyCode.S) then velocity = velocity - Root.CFrame.lookVector * 30 * dt end
-        if UserInputService:IsKeyDown(Enum.KeyCode.A) then velocity = velocity - Root.CFrame.rightVector * 30 * dt end
-        if UserInputService:IsKeyDown(Enum.KeyCode.D) then velocity = velocity + Root.CFrame.rightVector * 30 * dt end
-        
-        -- Gerakan Vertikal
-        if UserInputService:IsKeyDown(FlyUpKey) then velocity = velocity + Vector3.new(0, 30 * dt, 0) end
-        if UserInputService:IsKeyDown(FlyDownKey) then velocity = velocity + Vector3.new(0, -30 * dt, 0) end
-        
-        Root.CFrame = Root.CFrame + velocity
-        -- Mencegah gravitasi menarik RootPart
-        Root.AssemblyLinearVelocity = Vector3.new(0,0,0) 
-    end
-    
-    -- No-Clip Logic Loop (Bunny/Executor dasar biasanya lebih mengandalkan CanCollide)
-    if IsNoClip then
-        for _, part in ipairs(Character:GetChildren()) do
-            if part:IsA("BasePart") and part.CanCollide == true then
-                pcall(function() part.CanCollide = false end)
-                NoClipParts[part] = true
-            end
-        end
-    end
+-- ===== RELATIVE TELEPORT BUTTONS =====
+btn("TP Forward (+Z)", function()
+    local hrp = HRP()
+    if hrp then teleport(hrp.CFrame.LookVector * DIST) end
 end)
 
--- == Keybind untuk Toggle UI Hider ==
-UserInputService.InputBegan:Connect(function(input, gameProcessedEvent)
-    if input.KeyCode == ToggleUIKey and not gameProcessedEvent then
-        IsUIHidden = not IsUIHidden
-        ToggleAllUI(IsUIHidden)
-        
-        -- Update tampilan tombol UI Hider
-        local button = MainFrame:FindFirstChild("Sidebar"):FindFirstChild("MiscButton")
-        if button and button:FindFirstChild("HideAllUI(Ctrl)") then
-            local uiButton = button:FindFirstChild("HideAllUI(Ctrl)")
-            uiButton.Text = IsUIHidden and "HIDE UI: ON" or "HIDE UI: OFF"
-            uiButton.BackgroundColor3 = IsUIHidden and Color3.fromRGB(50, 150, 50) or Color3.fromRGB(150, 50, 50)
-        end
-    end
+btn("TP Backward (-Z)", function()
+    local hrp = HRP()
+    if hrp then teleport(-hrp.CFrame.LookVector * DIST) end
 end)
 
-
--- ***************************************
--- == 3. UI Generator (Sora V1 Style) ==
--- ***************************************
-
--- ** Setup Dasar Frame **
-local MainFrame = Instance.new("ScreenGui")
-MainFrame.Name = "SoraV1Frame"
-MainFrame.Parent = LocalPlayer:WaitForChild("PlayerGui")
-
-local Frame = Instance.new("Frame")
-Frame.Size = UDim2.new(0, 550, 0, 350)
-Frame.Position = UDim2.new(0.5, -275, 0.5, -175)
-Frame.BackgroundColor3 = Color3.fromRGB(24, 24, 24)
-Frame.BorderSizePixel = 0
-Frame.Parent = MainFrame
-
-local Corner = Instance.new("UICorner")
-Corner.CornerRadius = UDim.new(0, 12)
-Corner.Parent = Frame
-
--- ** Title Bar (untuk Dragging) **
-local TitleBar = Instance.new("Frame")
-TitleBar.Size = UDim2.new(1, 0, 0, 30)
-TitleBar.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-TitleBar.Parent = Frame
-
-local TitleLabel = Instance.new("TextLabel")
-TitleLabel.Size = UDim2.new(1, -50, 1, 0)
-TitleLabel.Text = "Sora V1 | Bunny Edition"
-TitleLabel.TextColor3 = Color3.fromRGB(255, 255, 255)
-TitleLabel.Font = Enum.Font.SourceSansBold
-TitleLabel.TextSize = 16
-TitleLabel.BackgroundColor3 = Color3.new(0, 0, 0, 0)
-TitleLabel.TextXAlignment = Enum.TextXAlignment.Left
-TitleLabel.Position = UDim2.new(0, 15, 0, 0)
-TitleLabel.Parent = TitleBar
-
--- ** Minimize Button **
-local MinimizeButton = Instance.new("TextButton")
-MinimizeButton.Size = UDim2.new(0, 20, 0, 20)
-MinimizeButton.Position = UDim2.new(1, -25, 0, 5)
-MinimizeButton.Text = "—"
-MinimizeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-MinimizeButton.Font = Enum.Font.SourceSansBold
-MinimizeButton.TextSize = 18
-MinimizeButton.BackgroundColor3 = Color3.fromRGB(50, 50, 50)
-MinimizeButton.Parent = TitleBar
-
--- ** Sidebar/Menu Kiri **
-local Sidebar = Instance.new("Frame")
-Sidebar.Name = "Sidebar"
-Sidebar.Size = UDim2.new(0, 150, 1, -30)
-Sidebar.Position = UDim2.new(0, 0, 0, 30)
-Sidebar.BackgroundColor3 = Color3.fromRGB(35, 35, 35)
-Sidebar.Parent = Frame
-
-local SidebarList = Instance.new("UIListLayout")
-SidebarList.Padding = UDim.new(0, 2)
-SidebarList.Parent = Sidebar
-
--- ** Content/Halaman Kanan **
-local ContentFrame = Instance.new("Frame")
-ContentFrame.Name = "ContentFrame"
-ContentFrame.Size = UDim2.new(1, -150, 1, -30)
-ContentFrame.Position = UDim2.new(0, 150, 0, 30)
-ContentFrame.BackgroundColor3 = Color3.fromRGB(45, 45, 45)
-ContentFrame.Parent = Frame
-
-local ContentPadding = Instance.new("UIPadding")
-ContentPadding.PaddingTop = UDim.new(0, 10)
-ContentPadding.PaddingBottom = UDim.new(0, 10)
-ContentPadding.PaddingLeft = UDim.new(0, 10)
-ContentPadding.PaddingRight = UDim.new(0, 10)
-ContentPadding.Parent = ContentFrame
-
-local ContentListLayout = Instance.new("UIListLayout")
-ContentListLayout.Padding = UDim.new(0, 10)
-ContentListLayout.Parent = ContentFrame
-
--- == 4. Helper UI Functions ==
-
-local ActiveTab = nil
-
--- Helper untuk membuat Tombol Sidebar
-local function createSidebarButton(name)
-    local Button = Instance.new("TextButton")
-    Button.Name = name .. "Button"
-    Button.Size = UDim2.new(1, 0, 0, 40)
-    Button.Text = name
-    Button.TextColor3 = Color3.fromRGB(200, 200, 200)
-    Button.Font = Enum.Font.SourceSansBold
-    Button.TextSize = 16
-    Button.BackgroundColor3 = Color3.new(0, 0, 0, 0)
-    Button.Parent = Sidebar
-    
-    local Page = Instance.new("Frame")
-    Page.Name = name .. "Page"
-    Page.Size = UDim2.new(1, 0, 1, 0)
-    Page.BackgroundColor3 = Color3.new(0, 0, 0, 0)
-    Page.Parent = ContentFrame
-    Page.Visible = false
-    
-    local PageList = Instance.new("UIListLayout")
-    PageList.Padding = UDim.new(0, 5)
-    PageList.Parent = Page
-    
-    Button.MouseButton1Click:Connect(function()
-        for _, child in ipairs(ContentFrame:GetChildren()) do
-            if child:IsA("Frame") and child.Name:match("Page$") then
-                child.Visible = false
-            end
-        end
-        Page.Visible = true
-        
-        -- Update highlight
-        for _, btn in ipairs(Sidebar:GetChildren()) do
-            if btn:IsA("TextButton") then
-                btn.TextColor3 = Color3.fromRGB(200, 200, 200)
-                btn.BackgroundColor3 = Color3.new(0, 0, 0, 0)
-            end
-        end
-        Button.TextColor3 = Color3.fromRGB(255, 255, 255)
-        Button.BackgroundColor3 = Color3.fromRGB(55, 55, 55)
-        ActiveTab = Button
-    end)
-    
-    return Page
-end
-
--- Helper untuk membuat Tombol Toggle Fitur
-local function createFeatureToggle(parentPage, text, command)
-    local Button = Instance.new("TextButton")
-    Button.Name = text:gsub(" ", ""):gsub("%W", "")
-    Button.Size = UDim2.new(1, 0, 0, 30)
-    Button.Text = text .. ": OFF"
-    Button.TextColor3 = Color3.fromRGB(255, 255, 255)
-    Button.Font = Enum.Font.SourceSans
-    Button.TextSize = 14
-    Button.BackgroundColor3 = Color3.fromRGB(150, 50, 50) -- Merah (OFF)
-    Button.Parent = parentPage
-    
-    local isActive = false
-    
-    Button.MouseButton1Click:Connect(function()
-        isActive = not isActive
-        command(isActive)
-        if isActive then
-            Button.BackgroundColor3 = Color3.fromRGB(50, 150, 50) -- Hijau (ON)
-            Button.Text = text .. ": ON"
-        else
-            Button.BackgroundColor3 = Color3.fromRGB(150, 50, 50) -- Merah (OFF)
-            Button.Text = text .. ": OFF"
-        end
-    end)
-    
-    return Button
-end
-
--- == 5. Inisialisasi Halaman & Fitur ==
-
--- Halaman 1: Main (Movement)
-local MainPage = createSidebarButton("Main")
-createFeatureToggle(MainPage, "Fly", ToggleFly)
-createFeatureToggle(MainPage, "No-Clip", ToggleNoClip)
-createFeatureToggle(MainPage, "Speed Hack", SetSpeed)
-
--- Halaman 2: Misc
-local MiscPage = createSidebarButton("Misc")
-createFeatureToggle(MiscPage, "Hide All UI (Ctrl)", function(state)
-    IsUIHidden = state
-    ToggleAllUI(state)
+btn("TP Right (+X)", function()
+    local hrp = HRP()
+    if hrp then teleport(hrp.CFrame.RightVector * DIST) end
 end)
 
--- Halaman default (Main)
-if Sidebar:FindFirstChild("MainButton") then
-    Sidebar:FindFirstChild("MainButton"):Click()
-end
-
--- ** Dragging Logic **
-local isDragging = false
-local dragStartPos
-TitleBar.MouseButton1Down:Connect(function(x, y)
-    isDragging = true
-    dragStartPos = Vector2.new(x, y) - Vector2.new(Frame.AbsolutePosition.X, Frame.AbsolutePosition.Y)
-end)
-UserInputService.InputChanged:Connect(function(input)
-    if isDragging and input.UserInputType == Enum.UserInputType.MouseMovement then
-        Frame.Position = UDim2.new(0, input.Position.X - dragStartPos.X, 0, input.Position.Y - dragStartPos.Y)
-    end
-end)
-UserInputService.InputEnded:Connect(function(input)
-    if input.UserInputType == Enum.UserInputType.MouseButton1 then
-        isDragging = false
-    end
+btn("TP Left (-X)", function()
+    local hrp = HRP()
+    if hrp then teleport(-hrp.CFrame.RightVector * DIST) end
 end)
 
--- ** Minimize Logic **
-local isMinimized = false
-MinimizeButton.MouseButton1Click:Connect(function()
-    isMinimized = not isMinimized
-    if isMinimized then
-        Frame.Size = UDim2.new(0, 550, 0, 30)
-        MinimizeButton.Text = "+"
-        Sidebar.Visible = false
-        ContentFrame.Visible = false
+btn("TP Up (+Y)", function()
+    teleport(Vector3.new(0, DIST, 0))
+end)
+
+btn("TP Down (-Y)", function()
+    teleport(Vector3.new(0, -DIST, 0))
+end)
+
+-- ===== FLY =====
+local flying = false
+local bv, bg
+
+btn("Fly ON / OFF", function()
+    flying = not flying
+    local hrp = HRP()
+    if not hrp then return end
+
+    if flying then
+        bv = Instance.new("BodyVelocity", hrp)
+        bv.MaxForce = Vector3.new(1e5,1e5,1e5)
+        bg = Instance.new("BodyGyro", hrp)
+        bg.MaxTorque = Vector3.new(1e5,1e5,1e5)
     else
-        Frame.Size = UDim2.new(0, 550, 0, 350)
-        MinimizeButton.Text = "—"
-        Sidebar.Visible = true
-        ContentFrame.Visible = true
+        if bv then bv:Destroy() end
+        if bg then bg:Destroy() end
     end
 end)
 
-print("Sora V1 (Bunny Edition) berhasil dimuat.")
+-- ===== NOCLIP =====
+local noclip = false
+btn("Noclip ON / OFF", function()
+    noclip = not noclip
+end)
+
+RunService.Stepped:Connect(function()
+    if noclip and player.Character then
+        for _,v in pairs(player.Character:GetDescendants()) do
+            if v:IsA("BasePart") then
+                v.CanCollide = false
+            end
+        end
+    end
+end)
+
+-- ===== SPEED =====
+local speedOn = false
+btn("Speed x2 ON / OFF", function()
+    speedOn = not speedOn
+    local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+    if hum then
+        hum.WalkSpeed = speedOn and 32 or 16
+    end
+end)
+
+-- ===== HIDE GAME UI =====
+local hidden = false
+btn("Hide Game UI ON / OFF", function()
+    hidden = not hidden
+    for _,ui in pairs(player.PlayerGui:GetChildren()) do
+        if ui ~= gui and ui:IsA("ScreenGui") then
+            ui.Enabled = not hidden
+        end
+    end
+end)
+
+-- ===== MINIMIZE =====
+local minimized = false
+btn("Minimize UI", function()
+    minimized = not minimized
+    frame.Size = minimized and UDim2.fromOffset(260,40) or UDim2.fromOffset(260,360)
+end)
+
+
+-- ===== RENDERSTEPPED LOOP (DIGABUNGKAN) =====
+RunService.RenderStepped:Connect(function()
+    -- Fly logic
+    if flying and bv and bg then
+        local cam = workspace.CurrentCamera
+        bv.Velocity = cam.CFrame.LookVector * 60
+        bg.CFrame = cam.CFrame
+    end
+
+    -- Coordinate Display logic
+    local hrp = HRP()
+    if hrp then
+        local p = hrp.Position
+        coord.Text = string.format(
+            "X: %.1f\nY: %.1f\nZ: %.1f",
+            p.X, p.Y, p.Z
+        )
+    end
+    
+    -- FPS Counter logic
+    local now = tick()
+    fps = math.floor(1 / (now - last))
+    last = now
+    fpsLabel.Text = "FPS: " .. fps
+end)
