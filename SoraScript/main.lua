@@ -24,7 +24,7 @@ gui.Name = "SORA"
 
 -- ===== FADE SCREEN =====
 local fadeGui = Instance.new("ScreenGui", player.PlayerGui)
-fadeGui.Name = "Sora"
+fadeGui.Name = "Soraboy"
 fadeGui.IgnoreGuiInset = true
 fadeGui.ResetOnSpawn = false
 local fadeFrame = Instance.new("Frame", fadeGui)
@@ -324,3 +324,4 @@ RunService.RenderStepped:Connect(function(dt) -- Ambil Delta Time (dt)
         pingLabel.TextColor3 = Color3.fromRGB(255,80,80) 
     end
 end)
+
