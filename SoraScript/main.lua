@@ -7,8 +7,7 @@ local player = Players.LocalPlayer
 local DIST = 50 
 local HEADER_HEIGHT = 35 
 local INFO_HEIGHT = 70 
--- Tinggi disesuaikan setelah menghapus 3 tombol Speed, 1 TextBox Speed, dan 1 tombol Water Walk
-local INITIAL_HEIGHT = 280 
+local INITIAL_HEIGHT = 270 
 local FRAME_WIDTH = 300
 
 -- UTILS
@@ -19,9 +18,8 @@ end
 
 -- GUI
 local gui = Instance.new("ScreenGui", player.PlayerGui)
-gui.Name = "SORA_V1"
+gui.Name = "SORA"
 
--- 1. MainFrame
 local frame = Instance.new("Frame", gui)
 frame.Size = UDim2.fromOffset(FRAME_WIDTH, INITIAL_HEIGHT)
 frame.Position = UDim2.fromOffset(200, 200)
@@ -31,7 +29,6 @@ frame.Draggable = true
 frame.BorderSizePixel = 0
 frame.ClipsDescendants = true 
 
--- 2. Header
 local title = Instance.new("TextLabel", frame)
 title.Name = "Header"
 title.Size = UDim2.new(1,0,0,HEADER_HEIGHT)
@@ -42,7 +39,6 @@ title.Font = Enum.Font.Code
 title.TextSize = 18 
 title.BorderSizePixel = 0
 
--- 3. ContentFrame
 local contentFrame = Instance.new("Frame", frame)
 contentFrame.Name = "ContentFrame"
 contentFrame.Size = UDim2.new(1,0,1,-HEADER_HEIGHT)
@@ -56,8 +52,6 @@ list.SortOrder = Enum.SortOrder.LayoutOrder
 list.FillDirection = Enum.FillDirection.Vertical
 list.VerticalAlignment = Enum.VerticalAlignment.Top
 
-
--- Function to create buttons
 local function btn(text, cb)
     local b = Instance.new("TextButton", contentFrame)
     b.Size = UDim2.fromOffset(FRAME_WIDTH - 20,40) 
@@ -71,7 +65,7 @@ local function btn(text, cb)
     return b
 end
 
--- 4. InfoFrame (PING & Koordinat)
+-- INFO DISPLAY
 local infoFrame = Instance.new("Frame", contentFrame)
 infoFrame.Name = "InfoFrame"
 infoFrame.Size = UDim2.fromOffset(FRAME_WIDTH - 20, INFO_HEIGHT)
@@ -83,7 +77,6 @@ infoList.HorizontalAlignment = Enum.HorizontalAlignment.Left
 infoList.SortOrder = Enum.SortOrder.LayoutOrder
 infoList.Padding = UDim.new(0,5)
 
--- COORDINATE LABEL 
 local coord = Instance.new("TextLabel", infoFrame)
 coord.Size = UDim2.new(1,0,0,30)
 coord.BackgroundTransparency = 1
@@ -94,7 +87,6 @@ coord.TextSize = 16
 coord.Font = Enum.Font.GothamBold 
 coord.TextColor3 = Color3.fromRGB(220,220,220) 
 
--- PING LABEL
 local pingLabel = Instance.new("TextLabel", infoFrame)
 pingLabel.Name = "PingLabel"
 pingLabel.Size = UDim2.new(1,0,0,25) 
@@ -110,10 +102,9 @@ separator.Size = UDim2.fromOffset(FRAME_WIDTH - 20, 2)
 separator.BackgroundColor3 = Color3.fromRGB(60,60,60)
 separator.LayoutOrder = 2
 
--- Main Buttons start here
 local buttonStartOrder = 3 
 
--- ===== PROPER FLY =====
+-- PROPER FLY
 local fly = false
 local speed = 60
 local bv, bg
@@ -163,7 +154,7 @@ btn("Fly ON / OFF", function()
 end).LayoutOrder = buttonStartOrder
 buttonStartOrder = buttonStartOrder + 1
 
--- ===== NOCLIP =====
+-- NOCLIP
 local noclip = false
 btn("Noclip ON / OFF", function()
     noclip = not noclip
@@ -180,7 +171,7 @@ RunService.Stepped:Connect(function()
     end
 end)
 
--- ===== HIDE GAME UI =====
+-- HIDE GAME UI
 local hidden = false
 btn("Hide Game UI ON / OFF", function()
     hidden = not hidden
@@ -193,11 +184,10 @@ end).LayoutOrder = buttonStartOrder
 buttonStartOrder = buttonStartOrder + 1
 
 
--- ===== RENDERSTEPPED LOOP =====
+-- RENDERSTEPPED LOOP
 RunService.RenderStepped:Connect(function()
     local hrp = HRP()
 
-    -- Proper Fly logic
     if fly and bv and bg then
         local cam = workspace.CurrentCamera
         local dir = Vector3.zero
@@ -212,23 +202,18 @@ RunService.RenderStepped:Connect(function()
         bv.Velocity = dir.Magnitude > 0 and dir.Unit * speed or Vector3.zero
         bg.CFrame = cam.CFrame
     end
-    
-    -- Walk On Water logic dihapus
 
-    -- Coordinate Display logic (Status Panel)
     if hrp then
         local p = hrp.Position
         coord.Text = string.format(
-            "POS: X: %.1f | Y: %.1f | Z: %.1f", -- WalkSpeed dihapus
+            "POS: X: %.1f | Y: %.1f | Z: %.1f", 
             p.X, p.Y, p.Z
         )
     end
     
-    -- PING logic
     local ping = Stats.Network.ServerStatsItem["Data Ping"]:GetValue()
     pingLabel.Text = string.format("PING: %d ms", ping)
 
-    -- Warna berdasarkan Ping
     if ping < 80 then
         pingLabel.TextColor3 = Color3.fromRGB(0,255,120) 
     elseif ping < 150 then
