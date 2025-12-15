@@ -2,14 +2,14 @@ local Players = game:GetService("Players")
 local UIS = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local Stats = game:GetService("Stats") 
-local TweenService = game:GetService("TweenService") -- Ditambahkan
+local TweenService = game:GetService("TweenService") 
 
 local player = Players.LocalPlayer
 local DIST = 50 
 local HEADER_HEIGHT = 35 
 local INFO_HEIGHT = 70 
--- Tinggi disesuaikan untuk tombol kamera baru
-local INITIAL_HEIGHT = 580 
+-- Tinggi disesuaikan untuk tombol + slider baru
+local INITIAL_HEIGHT = 700 -- Disesuaikan untuk 1 tombol baru
 local FRAME_WIDTH = 300
 
 -- UTILS
@@ -18,13 +18,36 @@ local function HRP()
     return c and c:FindFirstChild("HumanoidRootPart")
 end
 
+-- CAMERA INIT
+local cam = workspace.CurrentCamera
+local freecam = false
+local freecamSpeed = 1 -- Diatur oleh slider
+local camCF
+
+-- INPUT MOVEMENT (Freecam)
+local camKeys = {W=false,A=false,S=false,D=false,Q=false,E=false}
+
+UIS.InputBegan:Connect(function(i,g)
+	if g then return end
+	if camKeys[i.KeyCode.Name] ~= nil then
+		camKeys[i.KeyCode.Name] = true
+	end
+end)
+
+UIS.InputEnded:Connect(function(i)
+	if camKeys[i.KeyCode.Name] ~= nil then
+		camKeys[i.KeyCode.Name] = false
+	end
+end)
+
+
 -- GUI
 local gui = Instance.new("ScreenGui", player.PlayerGui)
 gui.Name = "SORA"
 
 -- ===== FADE SCREEN =====
 local fadeGui = Instance.new("ScreenGui", player.PlayerGui)
-fadeGui.Name = "Soraboy"
+fadeGui.Name = "SoraFade"
 fadeGui.IgnoreGuiInset = true
 fadeGui.ResetOnSpawn = false
 local fadeFrame = Instance.new("Frame", fadeGui)
@@ -96,6 +119,47 @@ local function btn(text, cb)
     return b
 end
 
+-- SLIDER FUNCTION
+local function slider(name, min, max, default, callback)
+	local f = Instance.new("Frame", contentFrame)
+	f.Size = UDim2.fromOffset(FRAME_WIDTH-20,40)
+	f.BackgroundTransparency = 1
+
+	local label = Instance.new("TextLabel", f)
+	label.Size = UDim2.new(1,0,0,20)
+	label.Text = name..": "..default
+	label.TextColor3 = Color3.new(1,1,1)
+	label.BackgroundTransparency = 1
+	label.Font = Enum.Font.Code
+    label.TextSize = 15 
+
+	local bar = Instance.new("TextButton", f)
+	bar.Size = UDim2.new(1,0,0,10)
+	bar.Position = UDim2.fromOffset(0,25)
+	bar.BackgroundColor3 = Color3.fromRGB(50,50,50)
+	bar.Text = ""
+    bar.TextSize = 1
+
+	bar.MouseButton1Down:Connect(function()
+		local move
+		move = UIS.InputChanged:Connect(function(i)
+			if i.UserInputType == Enum.UserInputType.MouseMovement then
+				local pct = math.clamp(
+					(i.Position.X - bar.AbsolutePosition.X) / bar.AbsoluteSize.X,
+					0,1
+				)
+				local val = math.floor(min + (max-min)*pct)
+				label.Text = name..": "..val
+				callback(val)
+			end
+		end)
+		UIS.InputEnded:Wait()
+		move:Disconnect()
+	end)
+    return f 
+end
+-- END SLIDER FUNCTION
+
 -- INFO DISPLAY
 local infoFrame = Instance.new("Frame", contentFrame)
 infoFrame.Name = "InfoFrame"
@@ -135,6 +199,22 @@ separator.LayoutOrder = 2
 
 local buttonStartOrder = 3 
 
+-- MINIMIZE
+local minimized = false
+btn("Minimize UI", function()
+	minimized = not minimized
+	for _,v in pairs(contentFrame:GetChildren()) do
+		if v ~= infoFrame and v:IsA("GuiObject") then 
+			v.Visible = not minimized
+		end
+	end
+	frame.Size = minimized
+		and UDim2.fromOffset(FRAME_WIDTH, HEADER_HEIGHT + INFO_HEIGHT + 10) 
+		or UDim2.fromOffset(FRAME_WIDTH, INITIAL_HEIGHT)
+end).LayoutOrder = buttonStartOrder
+buttonStartOrder = buttonStartOrder + 1
+
+
 -- FADE BUTTONS
 btn("Fade In", function()
 	FadeIn(1.5)
@@ -146,30 +226,11 @@ btn("Fade Out", function()
 end).LayoutOrder = buttonStartOrder
 buttonStartOrder = buttonStartOrder + 1
 
+
 -- PROPER FLY
 local fly = false
 local speed = 60
 local bv, bg
-local keys = {W=false,A=false,S=false,D=false,Space=false,Ctrl=false}
-
-UIS.InputBegan:Connect(function(i,g)
-    if g then return end
-    if i.KeyCode == Enum.KeyCode.W then keys.W=true end
-    if i.KeyCode == Enum.KeyCode.S then keys.S=true end
-    if i.KeyCode == Enum.KeyCode.A then keys.A=true end
-    if i.KeyCode == Enum.KeyCode.D then keys.D=true end
-    if i.KeyCode == Enum.KeyCode.Space then keys.Space=true end
-    if i.KeyCode == Enum.KeyCode.LeftControl then keys.Ctrl=true end
-end)
-
-UIS.InputEnded:Connect(function(i)
-    if i.KeyCode == Enum.KeyCode.W then keys.W=false end
-    if i.KeyCode == Enum.KeyCode.S then keys.S=false end
-    if i.KeyCode == Enum.KeyCode.A then keys.A=false end
-    if i.KeyCode == Enum.KeyCode.D then keys.D=false end
-    if i.KeyCode == Enum.KeyCode.Space then keys.Space=false end
-    if i.KeyCode == Enum.KeyCode.LeftControl then keys.Ctrl=false end
-end)
 
 btn("Fly ON / OFF", function()
     fly = not fly
@@ -196,6 +257,28 @@ btn("Fly ON / OFF", function()
 end).LayoutOrder = buttonStartOrder
 buttonStartOrder = buttonStartOrder + 1
 
+-- FREECAM
+btn("Freecam ON / OFF", function()
+	freecam = not freecam
+	if freecam then
+		camCF = cam.CFrame
+		cam.CameraType = Enum.CameraType.Scriptable
+        if fly then
+            btn("Fly ON / OFF"):Click() 
+        end
+	else
+		cam.CameraType = Enum.CameraType.Custom
+	end
+end).LayoutOrder = buttonStartOrder
+buttonStartOrder = buttonStartOrder + 1
+
+-- FREECAM SPEED SLIDER
+slider("Freecam Speed",1,20,5,function(v) 
+	freecamSpeed = v
+end).LayoutOrder = buttonStartOrder
+buttonStartOrder = buttonStartOrder + 1
+
+
 -- NOCLIP
 local noclip = false
 btn("Noclip ON / OFF", function()
@@ -213,8 +296,36 @@ RunService.Stepped:Connect(function()
     end
 end)
 
+-- HIDE NAME
+local namesHidden = false
+
+local function ToggleNameHiding(hide)
+    for _,p in pairs(Players:GetPlayers()) do
+        if p.Character then
+            -- Cari Humanoid NameTag di atas kepala (biasanya BillboardGui di atas HumanoidRootPart)
+            local nameTag = p.Character:FindFirstChildOfClass("Humanoid") and p.Character:FindFirstChildOfClass("Humanoid"):FindFirstChild("NameDisplay")
+            if nameTag then
+                nameTag.Visible = not hide
+            end
+            
+            -- Cari BillboardGui lain di karakter yang mungkin berisi nama
+            for _, descendant in pairs(p.Character:GetDescendants()) do
+                if descendant:IsA("BillboardGui") and descendant.Parent:IsA("Humanoid") then
+                    descendant.Enabled = not hide
+                end
+            end
+        end
+    end
+end
+
+btn("Hide Name ON / OFF", function()
+    namesHidden = not namesHidden
+    ToggleNameHiding(namesHidden)
+end).LayoutOrder = buttonStartOrder
+buttonStartOrder = buttonStartOrder + 1
+
+
 -- SMOOTH CAMERA MOVE UTILS
-local cam = workspace.CurrentCamera
 local function SmoothMove(targetCF, time)
 	local start = cam.CFrame
 	local t = 0
@@ -255,18 +366,25 @@ buttonStartOrder = buttonStartOrder + 1
 local orbitOn = false
 local orbitAngle = 0
 local orbitRadius = 60
+local orbitRate = 3 
 
 btn("Orbit Camera ON / OFF", function()
 	orbitOn = not orbitOn
 end).LayoutOrder = buttonStartOrder
 buttonStartOrder = buttonStartOrder + 1
 
+-- ORBIT SPEED SLIDER
+slider("Orbit Speed",1,10,3,function(v)
+	orbitRate = v
+end).LayoutOrder = buttonStartOrder
+buttonStartOrder = buttonStartOrder + 1
+
 -- HIDE GAME UI (SAFE)
 local hidden = false
-btn("Hide Game UI (Safe)", function()
+btn("Hide Game UI", function()
 	hidden = not hidden
 	for _,ui in pairs(player.PlayerGui:GetChildren()) do
-		if ui ~= gui and ui ~= fadeGui and ui:IsA("ScreenGui") and not ui.Name:lower():find("chat") then
+		if ui ~= gui and ui ~= fadeGui and ui:IsA("ScreenGui") then 
 			ui.Enabled = not hidden
 		end
 	end
@@ -275,13 +393,26 @@ buttonStartOrder = buttonStartOrder + 1
 
 
 -- RENDERSTEPPED LOOP
-RunService.RenderStepped:Connect(function(dt) -- Ambil Delta Time (dt)
+RunService.RenderStepped:Connect(function(dt) 
     local hrp = HRP()
 
-    -- Proper Fly logic
-    if fly and bv and bg then
-        local dir = Vector3.zero
+    -- Freecam Movement
+    if freecam then
+	    local move = Vector3.zero
+	    if camKeys.W then move += cam.CFrame.LookVector end
+	    if camKeys.S then move -= cam.CFrame.LookVector end
+	    if camKeys.A then move -= cam.CFrame.RightVector end
+	    if camKeys.D then move += cam.CFrame.RightVector end
+	    if camKeys.E then move += Vector3.new(0,1,0) end
+	    if camKeys.Q then move -= Vector3.new(0,1,0) end
 
+	    camCF = camCF + move * freecamSpeed
+	    cam.CFrame = camCF
+    end
+
+    -- Proper Fly logic
+    if fly and bv and bg and not freecam then -- Hanya aktif jika Freecam OFF
+        local dir = Vector3.zero
         if keys.W then dir += cam.CFrame.LookVector end
         if keys.S then dir -= cam.CFrame.LookVector end
         if keys.A then dir -= cam.CFrame.RightVector end
@@ -294,8 +425,8 @@ RunService.RenderStepped:Connect(function(dt) -- Ambil Delta Time (dt)
     end
 
     -- Orbit logic
-    if orbitOn then
-	    orbitAngle += 0.5 * dt
+    if orbitOn and not freecam then 
+	    orbitAngle += orbitRate * 0.1 * dt
 	    local center = cam.CFrame.Position
 	    local x = math.cos(orbitAngle) * orbitRadius
 	    local z = math.sin(orbitAngle) * orbitRadius
@@ -325,3 +456,15 @@ RunService.RenderStepped:Connect(function(dt) -- Ambil Delta Time (dt)
     end
 end)
 
+-- Pasang listener untuk Name Hiding pada karakter yang baru spawn/ditambahkan
+Players.PlayerAdded:Connect(function(p)
+    p.CharacterAdded:Connect(function()
+        if namesHidden then
+            ToggleNameHiding(true)
+        end
+    end)
+end)
+
+if namesHidden then
+    ToggleNameHiding(true)
+end
