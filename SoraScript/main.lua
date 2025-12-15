@@ -1,16 +1,17 @@
--- SORA V1 | Main (Status Panel Version) - PING & Minimize Removed
+-- SORA V1 | Main (Walk Speed & Water Walk Added)
 -- Bunny Executor Ready
 
 local Players = game:GetService("Players")
 local UIS = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
-local Stats = game:GetService("Stats") -- Dideklarasikan untuk akses mudah
+local Stats = game:GetService("Stats") 
+local Terrain = workspace.Terrain -- Ditambahkan untuk Walk On Water
 
 local player = Players.LocalPlayer
 local DIST = 50 
 local HEADER_HEIGHT = 35 
 local INFO_HEIGHT = 70 
-local INITIAL_HEIGHT = 440 -- Dikurangi karena tombol Minimize dihapus
+local INITIAL_HEIGHT = 580 -- Diperbesar untuk menampung tombol baru
 local FRAME_WIDTH = 300
 
 -- ===== UTILS =====
@@ -39,7 +40,7 @@ frame.ClipsDescendants = true
 local title = Instance.new("TextLabel", frame)
 title.Name = "Header"
 title.Size = UDim2.new(1,0,0,HEADER_HEIGHT)
-title.Text = "SORA V1 | Bunny Executor"
+title.Text = "SORA"
 title.TextColor3 = Color3.fromRGB(0,255,180)
 title.BackgroundColor3 = Color3.fromRGB(30,30,30)
 title.Font = Enum.Font.Code
@@ -87,7 +88,7 @@ infoList.HorizontalAlignment = Enum.HorizontalAlignment.Left
 infoList.SortOrder = Enum.SortOrder.LayoutOrder
 infoList.Padding = UDim.new(0,5)
 
--- COORDINATE LABEL (unchanged size/font)
+-- COORDINATE LABEL 
 local coord = Instance.new("TextLabel", infoFrame)
 coord.Size = UDim2.new(1,0,0,30)
 coord.BackgroundTransparency = 1
@@ -98,16 +99,16 @@ coord.TextSize = 16
 coord.Font = Enum.Font.GothamBold 
 coord.TextColor3 = Color3.fromRGB(220,220,220) 
 
--- PING LABEL (Menggantikan fpsLabel)
+-- PING LABEL
 local pingLabel = Instance.new("TextLabel", infoFrame)
 pingLabel.Name = "PingLabel"
 pingLabel.Size = UDim2.new(1,0,0,25) 
 pingLabel.BackgroundTransparency = 1
 pingLabel.TextXAlignment = Enum.TextXAlignment.Left
 pingLabel.Text = "PING: -- ms"
-pingLabel.TextSize = 20 -- Ditingkatkan
-pingLabel.Font = Enum.Font.GothamBold -- Ditingkatkan
-pingLabel.TextColor3 = Color3.fromRGB(0,255,180) -- Warna awal (akan diubah dinamis)
+pingLabel.TextSize = 20 
+pingLabel.Font = Enum.Font.GothamBold 
+pingLabel.TextColor3 = Color3.fromRGB(0,255,180) 
 
 
 local separator = Instance.new("Frame", contentFrame) 
@@ -118,9 +119,8 @@ separator.LayoutOrder = 2
 -- Main Buttons start here
 local buttonStartOrder = 3 
 
--- LOGIKA TELEPORT DIHAPUS
 
--- ===== PROPER FLY (LOGIC UNCHANGED) =====
+-- ===== PROPER FLY  =====
 local fly = false
 local speed = 60
 local bv, bg
@@ -170,7 +170,44 @@ btn("Fly ON / OFF", function()
 end).LayoutOrder = buttonStartOrder
 buttonStartOrder = buttonStartOrder + 1
 
--- ===== NOCLIP (Logic Unchanged) =====
+-- ===== WALK SPEED =====
+local speedValue = 16
+local speedEnabled = true
+
+local function applySpeed()
+	local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+	if hum then
+		hum.WalkSpeed = speedEnabled and speedValue or 16
+	end
+end
+
+btn("Speed +5", function()
+	speedValue += 5
+	applySpeed()
+end).LayoutOrder = buttonStartOrder
+buttonStartOrder = buttonStartOrder + 1
+
+btn("Speed -5", function()
+	speedValue = math.max(5, speedValue - 5)
+	applySpeed()
+end).LayoutOrder = buttonStartOrder
+buttonStartOrder = buttonStartOrder + 1
+
+btn("Speed ON / OFF", function()
+	speedEnabled = not speedEnabled
+	applySpeed()
+end).LayoutOrder = buttonStartOrder
+buttonStartOrder = buttonStartOrder + 1
+
+-- ===== WALK ON WATER  =====
+local waterWalk = false
+
+btn("Walk On Water ON / OFF", function()
+	waterWalk = not waterWalk
+end).LayoutOrder = buttonStartOrder
+buttonStartOrder = buttonStartOrder + 1
+
+-- ===== NOCLIP  =====
 local noclip = false
 btn("Noclip ON / OFF", function()
     noclip = not noclip
@@ -187,18 +224,8 @@ RunService.Stepped:Connect(function()
     end
 end)
 
--- ===== SPEED (Logic Unchanged) =====
-local speedOn = false
-btn("Speed x2 ON / OFF", function()
-    speedOn = not speedOn
-    local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
-    if hum then
-        hum.WalkSpeed = speedOn and 32 or 16
-    end
-end).LayoutOrder = buttonStartOrder
-buttonStartOrder = buttonStartOrder + 1
 
--- ===== HIDE GAME UI (Logic Unchanged) =====
+-- ===== HIDE GAME UI  =====
 local hidden = false
 btn("Hide Game UI ON / OFF", function()
     hidden = not hidden
@@ -210,10 +237,11 @@ btn("Hide Game UI ON / OFF", function()
 end).LayoutOrder = buttonStartOrder
 buttonStartOrder = buttonStartOrder + 1
 
--- LOGIKA MINIMIZE DIHAPUS
 
--- ===== RENDERSTEPPED LOOP (PING LOGIC ADDED) =====
+-- ===== RENDERSTEPPED LOOP (PING & WALK ON WATER ) =====
 RunService.RenderStepped:Connect(function()
+    local hrp = HRP()
+
     -- Proper Fly logic
     if fly and bv and bg then
         local cam = workspace.CurrentCamera
@@ -230,17 +258,40 @@ RunService.RenderStepped:Connect(function()
         bg.CFrame = cam.CFrame
     end
 
+    -- Walk On Water logic
+	if waterWalk and hrp then
+		local rayParams = RaycastParams.new()
+		rayParams.FilterDescendantsInstances = {player.Character}
+		rayParams.FilterType = Enum.RaycastFilterType.Blacklist
+
+		local result = workspace:Raycast(
+			hrp.Position,
+			Vector3.new(0, -6, 0),
+			rayParams
+		)
+
+		if result and result.Instance == Terrain and Terrain:ReadVoxels(
+			Region3.new(
+				result.Position - Vector3.new(2,2,2),
+				result.Position + Vector3.new(2,2,2)
+			),
+			4
+		) then
+			-- Hentikan pergerakan vertikal jika menyentuh air
+			hrp.Velocity = Vector3.new(hrp.Velocity.X, 0, hrp.Velocity.Z)
+		end
+	end
+
     -- Coordinate Display logic (Status Panel)
-    local hrp = HRP()
     if hrp then
         local p = hrp.Position
         coord.Text = string.format(
-            "POS: X: %.1f | Y: %.1f | Z: %.1f", 
-            p.X, p.Y, p.Z
+            "POS: X: %.1f | Y: %.1f | Z: %.1f | WS: %d", -- Tampilkan WalkSpeed saat ini
+            p.X, p.Y, p.Z, speedValue
         )
     end
     
-    -- PING logic (Menggantikan FPS)
+    -- PING logic
     local ping = Stats.Network.ServerStatsItem["Data Ping"]:GetValue()
     pingLabel.Text = string.format("PING: %d ms", ping)
 
