@@ -7,7 +7,8 @@ local player = Players.LocalPlayer
 local DIST = 50 
 local HEADER_HEIGHT = 35 
 local INFO_HEIGHT = 70 
-local INITIAL_HEIGHT = 440 -- Disesuaikan karena tombol speed berkurang dan minimize dihapus
+-- Tinggi disesuaikan setelah menghapus 3 tombol Speed, 1 TextBox Speed, dan 1 tombol Water Walk
+local INITIAL_HEIGHT = 280 
 local FRAME_WIDTH = 300
 
 -- UTILS
@@ -34,7 +35,7 @@ frame.ClipsDescendants = true
 local title = Instance.new("TextLabel", frame)
 title.Name = "Header"
 title.Size = UDim2.new(1,0,0,HEADER_HEIGHT)
-title.Text = "SORA V1" -- Disingkat
+title.Text = "SORA"
 title.TextColor3 = Color3.fromRGB(0,255,180)
 title.BackgroundColor3 = Color3.fromRGB(30,30,30)
 title.Font = Enum.Font.Code
@@ -88,7 +89,7 @@ coord.Size = UDim2.new(1,0,0,30)
 coord.BackgroundTransparency = 1
 coord.TextWrapped = true
 coord.TextXAlignment = Enum.TextXAlignment.Left
-coord.Text = "POS: X: 0.0 | Y: 0.0 | Z: 0.0 | WS: 16"
+coord.Text = "POS: X: 0.0 | Y: 0.0 | Z: 0.0"
 coord.TextSize = 16 
 coord.Font = Enum.Font.GothamBold 
 coord.TextColor3 = Color3.fromRGB(220,220,220) 
@@ -112,47 +113,7 @@ separator.LayoutOrder = 2
 -- Main Buttons start here
 local buttonStartOrder = 3 
 
--- ===== WALK SPEED (TEXTBOX BARU) =====
-local speedEnabled = true
-local speedValue = 16
-local speedBox = Instance.new("TextBox", contentFrame)
-speedBox.Size = UDim2.fromOffset(FRAME_WIDTH - 20, 40) -- Tinggi disesuaikan
-speedBox.PlaceholderText = "Set Speed (default 16)"
-speedBox.Text = "16"
-speedBox.BackgroundColor3 = Color3.fromRGB(35,35,35)
-speedBox.TextColor3 = Color3.new(1,1,1)
-speedBox.Font = Enum.Font.Code
-speedBox.TextSize = 18 -- Disesuaikan
-speedBox.ClearTextOnFocus = false
-speedBox.LayoutOrder = buttonStartOrder
-buttonStartOrder += 1
-
-local function applySpeed()
-	local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
-	if hum then
-		hum.WalkSpeed = speedEnabled and speedValue or 16
-	end
-end
-
-speedBox.FocusLost:Connect(function(enter)
-	if not enter then return end
-	local val = tonumber(speedBox.Text)
-	if val and val >= 5 and val < 500 then -- Batas minimal 5
-		speedValue = val
-		applySpeed()
-		speedBox.Text = "Speed: "..val
-	else
-		speedBox.Text = "Invalid"
-	end
-end)
-
-btn("Speed ON / OFF", function()
-	speedEnabled = not speedEnabled
-	applySpeed()
-end).LayoutOrder = buttonStartOrder
-buttonStartOrder = buttonStartOrder + 1
-
--- ===== PROPER FLY (LOGIC UNCHANGED) =====
+-- ===== PROPER FLY =====
 local fly = false
 local speed = 60
 local bv, bg
@@ -202,17 +163,7 @@ btn("Fly ON / OFF", function()
 end).LayoutOrder = buttonStartOrder
 buttonStartOrder = buttonStartOrder + 1
 
--- ===== WALK ON WATER (LOGIC BARU) =====
-local waterWalk = false
-local lockedY = nil
-
-btn("Walk On Water ON / OFF", function()
-	waterWalk = not waterWalk
-	lockedY = nil
-end).LayoutOrder = buttonStartOrder
-buttonStartOrder = buttonStartOrder + 1
-
--- ===== NOCLIP (Logic Unchanged) =====
+-- ===== NOCLIP =====
 local noclip = false
 btn("Noclip ON / OFF", function()
     noclip = not noclip
@@ -229,7 +180,7 @@ RunService.Stepped:Connect(function()
     end
 end)
 
--- ===== HIDE GAME UI (Logic Unchanged) =====
+-- ===== HIDE GAME UI =====
 local hidden = false
 btn("Hide Game UI ON / OFF", function()
     hidden = not hidden
@@ -242,7 +193,7 @@ end).LayoutOrder = buttonStartOrder
 buttonStartOrder = buttonStartOrder + 1
 
 
--- ===== RENDERSTEPPED LOOP (FINAL LOGIC) =====
+-- ===== RENDERSTEPPED LOOP =====
 RunService.RenderStepped:Connect(function()
     local hrp = HRP()
 
@@ -261,41 +212,15 @@ RunService.RenderStepped:Connect(function()
         bv.Velocity = dir.Magnitude > 0 and dir.Unit * speed or Vector3.zero
         bg.CFrame = cam.CFrame
     end
-
-    -- Walk On Water logic
-	if waterWalk and hrp then
-		local rayParams = RaycastParams.new()
-		rayParams.FilterDescendantsInstances = {player.Character}
-		rayParams.FilterType = Enum.RaycastFilterType.Blacklist
-
-		local result = workspace:Raycast(
-			hrp.Position,
-			Vector3.new(0, -10, 0),
-			rayParams
-		)
-
-		if result and result.Material == Enum.Material.Water then
-			if not lockedY then
-				lockedY = result.Position.Y + 3
-			end
-
-			-- Mengunci posisi Y sambil mempertahankan rotasi
-			hrp.CFrame = CFrame.new(
-				hrp.Position.X,
-				lockedY,
-				hrp.Position.Z
-			) * (hrp.CFrame - hrp.CFrame.Position)
-		else
-			lockedY = nil
-		end
-	end
+    
+    -- Walk On Water logic dihapus
 
     -- Coordinate Display logic (Status Panel)
     if hrp then
         local p = hrp.Position
         coord.Text = string.format(
-            "POS: X: %.1f | Y: %.1f | Z: %.1f | WS: %d", 
-            p.X, p.Y, p.Z, speedValue
+            "POS: X: %.1f | Y: %.1f | Z: %.1f", -- WalkSpeed dihapus
+            p.X, p.Y, p.Z
         )
     end
     
