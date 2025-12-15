@@ -1,32 +1,26 @@
--- SORA V1 | Main (Walk Speed & Water Walk Added)
--- Bunny Executor Ready
-
 local Players = game:GetService("Players")
 local UIS = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local Stats = game:GetService("Stats") 
-local Terrain = workspace.Terrain -- Ditambahkan untuk Walk On Water
 
 local player = Players.LocalPlayer
 local DIST = 50 
 local HEADER_HEIGHT = 35 
 local INFO_HEIGHT = 70 
-local INITIAL_HEIGHT = 580 -- Diperbesar untuk menampung tombol baru
+local INITIAL_HEIGHT = 440 -- Disesuaikan karena tombol speed berkurang dan minimize dihapus
 local FRAME_WIDTH = 300
 
--- ===== UTILS =====
+-- UTILS
 local function HRP()
     local c = player.Character
     return c and c:FindFirstChild("HumanoidRootPart")
 end
 
--- Fungsi teleport dihapus
-
--- ===== GUI (STRUCTURE FIXED & ENHANCED) =====
+-- GUI
 local gui = Instance.new("ScreenGui", player.PlayerGui)
-gui.Name = "SoraV1_Status"
+gui.Name = "SORA_V1"
 
--- 1. MainFrame (Frame utama yang draggable)
+-- 1. MainFrame
 local frame = Instance.new("Frame", gui)
 frame.Size = UDim2.fromOffset(FRAME_WIDTH, INITIAL_HEIGHT)
 frame.Position = UDim2.fromOffset(200, 200)
@@ -36,18 +30,18 @@ frame.Draggable = true
 frame.BorderSizePixel = 0
 frame.ClipsDescendants = true 
 
--- 2. Header (Title Bar)
+-- 2. Header
 local title = Instance.new("TextLabel", frame)
 title.Name = "Header"
 title.Size = UDim2.new(1,0,0,HEADER_HEIGHT)
-title.Text = "SORA"
+title.Text = "SORA V1" -- Disingkat
 title.TextColor3 = Color3.fromRGB(0,255,180)
 title.BackgroundColor3 = Color3.fromRGB(30,30,30)
 title.Font = Enum.Font.Code
 title.TextSize = 18 
 title.BorderSizePixel = 0
 
--- 3. ContentFrame (Container untuk semua tombol dan info)
+-- 3. ContentFrame
 local contentFrame = Instance.new("Frame", frame)
 contentFrame.Name = "ContentFrame"
 contentFrame.Size = UDim2.new(1,0,1,-HEADER_HEIGHT)
@@ -62,7 +56,7 @@ list.FillDirection = Enum.FillDirection.Vertical
 list.VerticalAlignment = Enum.VerticalAlignment.Top
 
 
--- Function to create buttons (ditempatkan di ContentFrame)
+-- Function to create buttons
 local function btn(text, cb)
     local b = Instance.new("TextButton", contentFrame)
     b.Size = UDim2.fromOffset(FRAME_WIDTH - 20,40) 
@@ -76,7 +70,7 @@ local function btn(text, cb)
     return b
 end
 
--- 4. InfoFrame (PING & Koordinat) - Status Panel
+-- 4. InfoFrame (PING & Koordinat)
 local infoFrame = Instance.new("Frame", contentFrame)
 infoFrame.Name = "InfoFrame"
 infoFrame.Size = UDim2.fromOffset(FRAME_WIDTH - 20, INFO_HEIGHT)
@@ -94,7 +88,7 @@ coord.Size = UDim2.new(1,0,0,30)
 coord.BackgroundTransparency = 1
 coord.TextWrapped = true
 coord.TextXAlignment = Enum.TextXAlignment.Left
-coord.Text = "POS: X: 0.0 | Y: 0.0 | Z: 0.0"
+coord.Text = "POS: X: 0.0 | Y: 0.0 | Z: 0.0 | WS: 16"
 coord.TextSize = 16 
 coord.Font = Enum.Font.GothamBold 
 coord.TextColor3 = Color3.fromRGB(220,220,220) 
@@ -110,7 +104,6 @@ pingLabel.TextSize = 20
 pingLabel.Font = Enum.Font.GothamBold 
 pingLabel.TextColor3 = Color3.fromRGB(0,255,180) 
 
-
 local separator = Instance.new("Frame", contentFrame) 
 separator.Size = UDim2.fromOffset(FRAME_WIDTH - 20, 2)
 separator.BackgroundColor3 = Color3.fromRGB(60,60,60)
@@ -119,8 +112,47 @@ separator.LayoutOrder = 2
 -- Main Buttons start here
 local buttonStartOrder = 3 
 
+-- ===== WALK SPEED (TEXTBOX BARU) =====
+local speedEnabled = true
+local speedValue = 16
+local speedBox = Instance.new("TextBox", contentFrame)
+speedBox.Size = UDim2.fromOffset(FRAME_WIDTH - 20, 40) -- Tinggi disesuaikan
+speedBox.PlaceholderText = "Set Speed (default 16)"
+speedBox.Text = "16"
+speedBox.BackgroundColor3 = Color3.fromRGB(35,35,35)
+speedBox.TextColor3 = Color3.new(1,1,1)
+speedBox.Font = Enum.Font.Code
+speedBox.TextSize = 18 -- Disesuaikan
+speedBox.ClearTextOnFocus = false
+speedBox.LayoutOrder = buttonStartOrder
+buttonStartOrder += 1
 
--- ===== PROPER FLY  =====
+local function applySpeed()
+	local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
+	if hum then
+		hum.WalkSpeed = speedEnabled and speedValue or 16
+	end
+end
+
+speedBox.FocusLost:Connect(function(enter)
+	if not enter then return end
+	local val = tonumber(speedBox.Text)
+	if val and val >= 5 and val < 500 then -- Batas minimal 5
+		speedValue = val
+		applySpeed()
+		speedBox.Text = "Speed: "..val
+	else
+		speedBox.Text = "Invalid"
+	end
+end)
+
+btn("Speed ON / OFF", function()
+	speedEnabled = not speedEnabled
+	applySpeed()
+end).LayoutOrder = buttonStartOrder
+buttonStartOrder = buttonStartOrder + 1
+
+-- ===== PROPER FLY (LOGIC UNCHANGED) =====
 local fly = false
 local speed = 60
 local bv, bg
@@ -170,44 +202,17 @@ btn("Fly ON / OFF", function()
 end).LayoutOrder = buttonStartOrder
 buttonStartOrder = buttonStartOrder + 1
 
--- ===== WALK SPEED =====
-local speedValue = 16
-local speedEnabled = true
-
-local function applySpeed()
-	local hum = player.Character and player.Character:FindFirstChildOfClass("Humanoid")
-	if hum then
-		hum.WalkSpeed = speedEnabled and speedValue or 16
-	end
-end
-
-btn("Speed +5", function()
-	speedValue += 5
-	applySpeed()
-end).LayoutOrder = buttonStartOrder
-buttonStartOrder = buttonStartOrder + 1
-
-btn("Speed -5", function()
-	speedValue = math.max(5, speedValue - 5)
-	applySpeed()
-end).LayoutOrder = buttonStartOrder
-buttonStartOrder = buttonStartOrder + 1
-
-btn("Speed ON / OFF", function()
-	speedEnabled = not speedEnabled
-	applySpeed()
-end).LayoutOrder = buttonStartOrder
-buttonStartOrder = buttonStartOrder + 1
-
--- ===== WALK ON WATER  =====
+-- ===== WALK ON WATER (LOGIC BARU) =====
 local waterWalk = false
+local lockedY = nil
 
 btn("Walk On Water ON / OFF", function()
 	waterWalk = not waterWalk
+	lockedY = nil
 end).LayoutOrder = buttonStartOrder
 buttonStartOrder = buttonStartOrder + 1
 
--- ===== NOCLIP  =====
+-- ===== NOCLIP (Logic Unchanged) =====
 local noclip = false
 btn("Noclip ON / OFF", function()
     noclip = not noclip
@@ -224,8 +229,7 @@ RunService.Stepped:Connect(function()
     end
 end)
 
-
--- ===== HIDE GAME UI  =====
+-- ===== HIDE GAME UI (Logic Unchanged) =====
 local hidden = false
 btn("Hide Game UI ON / OFF", function()
     hidden = not hidden
@@ -238,7 +242,7 @@ end).LayoutOrder = buttonStartOrder
 buttonStartOrder = buttonStartOrder + 1
 
 
--- ===== RENDERSTEPPED LOOP (PING & WALK ON WATER ) =====
+-- ===== RENDERSTEPPED LOOP (FINAL LOGIC) =====
 RunService.RenderStepped:Connect(function()
     local hrp = HRP()
 
@@ -266,19 +270,23 @@ RunService.RenderStepped:Connect(function()
 
 		local result = workspace:Raycast(
 			hrp.Position,
-			Vector3.new(0, -6, 0),
+			Vector3.new(0, -10, 0),
 			rayParams
 		)
 
-		if result and result.Instance == Terrain and Terrain:ReadVoxels(
-			Region3.new(
-				result.Position - Vector3.new(2,2,2),
-				result.Position + Vector3.new(2,2,2)
-			),
-			4
-		) then
-			-- Hentikan pergerakan vertikal jika menyentuh air
-			hrp.Velocity = Vector3.new(hrp.Velocity.X, 0, hrp.Velocity.Z)
+		if result and result.Material == Enum.Material.Water then
+			if not lockedY then
+				lockedY = result.Position.Y + 3
+			end
+
+			-- Mengunci posisi Y sambil mempertahankan rotasi
+			hrp.CFrame = CFrame.new(
+				hrp.Position.X,
+				lockedY,
+				hrp.Position.Z
+			) * (hrp.CFrame - hrp.CFrame.Position)
+		else
+			lockedY = nil
 		end
 	end
 
@@ -286,7 +294,7 @@ RunService.RenderStepped:Connect(function()
     if hrp then
         local p = hrp.Position
         coord.Text = string.format(
-            "POS: X: %.1f | Y: %.1f | Z: %.1f | WS: %d", -- Tampilkan WalkSpeed saat ini
+            "POS: X: %.1f | Y: %.1f | Z: %.1f | WS: %d", 
             p.X, p.Y, p.Z, speedValue
         )
     end
@@ -297,10 +305,10 @@ RunService.RenderStepped:Connect(function()
 
     -- Warna berdasarkan Ping
     if ping < 80 then
-        pingLabel.TextColor3 = Color3.fromRGB(0,255,120) -- Hijau
+        pingLabel.TextColor3 = Color3.fromRGB(0,255,120) 
     elseif ping < 150 then
-        pingLabel.TextColor3 = Color3.fromRGB(255,200,0) -- Kuning
+        pingLabel.TextColor3 = Color3.fromRGB(255,200,0) 
     else
-        pingLabel.TextColor3 = Color3.fromRGB(255,80,80) -- Merah
+        pingLabel.TextColor3 = Color3.fromRGB(255,80,80) 
     end
 end)
