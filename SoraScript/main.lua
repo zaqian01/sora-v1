@@ -2,12 +2,14 @@ local Players = game:GetService("Players")
 local UIS = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
 local Stats = game:GetService("Stats") 
+local TweenService = game:GetService("TweenService") -- Ditambahkan
 
 local player = Players.LocalPlayer
 local DIST = 50 
 local HEADER_HEIGHT = 35 
 local INFO_HEIGHT = 70 
-local INITIAL_HEIGHT = 270 
+-- Tinggi disesuaikan untuk tombol kamera baru
+local INITIAL_HEIGHT = 580 
 local FRAME_WIDTH = 300
 
 -- UTILS
@@ -19,6 +21,35 @@ end
 -- GUI
 local gui = Instance.new("ScreenGui", player.PlayerGui)
 gui.Name = "SORA"
+
+-- ===== FADE SCREEN =====
+local fadeGui = Instance.new("ScreenGui", player.PlayerGui)
+fadeGui.Name = "Sora"
+fadeGui.IgnoreGuiInset = true
+fadeGui.ResetOnSpawn = false
+local fadeFrame = Instance.new("Frame", fadeGui)
+fadeFrame.Size = UDim2.fromScale(1,1)
+fadeFrame.BackgroundColor3 = Color3.new(0,0,0)
+fadeFrame.BackgroundTransparency = 1
+fadeFrame.ZIndex = 999
+
+local function FadeIn(time)
+	fadeFrame.BackgroundTransparency = 0
+	TweenService:Create(
+		fadeFrame,
+		TweenInfo.new(time, Enum.EasingStyle.Sine),
+		{BackgroundTransparency = 1}
+	):Play()
+end
+local function FadeOut(time)
+	fadeFrame.BackgroundTransparency = 1
+	TweenService:Create(
+		fadeFrame,
+		TweenInfo.new(time, Enum.EasingStyle.Sine),
+		{BackgroundTransparency = 0}
+	):Play()
+end
+-- =======================
 
 local frame = Instance.new("Frame", gui)
 frame.Size = UDim2.fromOffset(FRAME_WIDTH, INITIAL_HEIGHT)
@@ -104,6 +135,17 @@ separator.LayoutOrder = 2
 
 local buttonStartOrder = 3 
 
+-- FADE BUTTONS
+btn("Fade In", function()
+	FadeIn(1.5)
+end).LayoutOrder = buttonStartOrder
+buttonStartOrder = buttonStartOrder + 1
+
+btn("Fade Out", function()
+	FadeOut(1.5)
+end).LayoutOrder = buttonStartOrder
+buttonStartOrder = buttonStartOrder + 1
+
 -- PROPER FLY
 local fly = false
 local speed = 60
@@ -171,25 +213,73 @@ RunService.Stepped:Connect(function()
     end
 end)
 
--- HIDE GAME UI
+-- SMOOTH CAMERA MOVE UTILS
+local cam = workspace.CurrentCamera
+local function SmoothMove(targetCF, time)
+	local start = cam.CFrame
+	local t = 0
+	while t < 1 do
+		local dt = RunService.RenderStepped:Wait()
+		t += dt / time
+		cam.CFrame = start:Lerp(targetCF, math.clamp(t,0,1))
+	end
+end
+
+-- CAMERA DOLLY / PUSH
+btn("Cinematic Push Forward", function()
+	local cf = cam.CFrame * CFrame.new(0,0,-40)
+	SmoothMove(cf, 2)
+end).LayoutOrder = buttonStartOrder
+buttonStartOrder = buttonStartOrder + 1
+
+-- DOLLY ZOOM
+btn("Dolly Zoom In", function()
+	for i = 1,40 do
+		cam.FieldOfView -= 0.5
+		cam.CFrame *= CFrame.new(0,0,-1)
+		RunService.RenderStepped:Wait()
+	end
+end).LayoutOrder = buttonStartOrder
+buttonStartOrder = buttonStartOrder + 1
+
+btn("Dolly Zoom Out", function()
+	for i = 1,40 do
+		cam.FieldOfView += 0.5
+		cam.CFrame *= CFrame.new(0,0,1)
+		RunService.RenderStepped:Wait()
+	end
+end).LayoutOrder = buttonStartOrder
+buttonStartOrder = buttonStartOrder + 1
+
+-- ORBIT MODE
+local orbitOn = false
+local orbitAngle = 0
+local orbitRadius = 60
+
+btn("Orbit Camera ON / OFF", function()
+	orbitOn = not orbitOn
+end).LayoutOrder = buttonStartOrder
+buttonStartOrder = buttonStartOrder + 1
+
+-- HIDE GAME UI (SAFE)
 local hidden = false
-btn("Hide Game UI ON / OFF", function()
-    hidden = not hidden
-    for _,ui in pairs(player.PlayerGui:GetChildren()) do
-        if ui ~= gui and ui:IsA("ScreenGui") then
-            ui.Enabled = not hidden
-        end
-    end
+btn("Hide Game UI (Safe)", function()
+	hidden = not hidden
+	for _,ui in pairs(player.PlayerGui:GetChildren()) do
+		if ui ~= gui and ui ~= fadeGui and ui:IsA("ScreenGui") and not ui.Name:lower():find("chat") then
+			ui.Enabled = not hidden
+		end
+	end
 end).LayoutOrder = buttonStartOrder
 buttonStartOrder = buttonStartOrder + 1
 
 
 -- RENDERSTEPPED LOOP
-RunService.RenderStepped:Connect(function()
+RunService.RenderStepped:Connect(function(dt) -- Ambil Delta Time (dt)
     local hrp = HRP()
 
+    -- Proper Fly logic
     if fly and bv and bg then
-        local cam = workspace.CurrentCamera
         local dir = Vector3.zero
 
         if keys.W then dir += cam.CFrame.LookVector end
@@ -203,6 +293,16 @@ RunService.RenderStepped:Connect(function()
         bg.CFrame = cam.CFrame
     end
 
+    -- Orbit logic
+    if orbitOn then
+	    orbitAngle += 0.5 * dt
+	    local center = cam.CFrame.Position
+	    local x = math.cos(orbitAngle) * orbitRadius
+	    local z = math.sin(orbitAngle) * orbitRadius
+	    cam.CFrame = CFrame.new(center + Vector3.new(x, 15, z), center)
+    end
+
+    -- Coordinate Display logic (Status Panel)
     if hrp then
         local p = hrp.Position
         coord.Text = string.format(
@@ -211,9 +311,11 @@ RunService.RenderStepped:Connect(function()
         )
     end
     
+    -- PING logic
     local ping = Stats.Network.ServerStatsItem["Data Ping"]:GetValue()
     pingLabel.Text = string.format("PING: %d ms", ping)
 
+    -- Warna berdasarkan Ping
     if ping < 80 then
         pingLabel.TextColor3 = Color3.fromRGB(0,255,120) 
     elseif ping < 150 then
