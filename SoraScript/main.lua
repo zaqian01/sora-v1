@@ -1,15 +1,16 @@
--- SORA V1 | Main (Status Panel Version) - Teleport Removed, UI Enhanced
+-- SORA V1 | Main (Status Panel Version) - PING & Minimize Removed
 -- Bunny Executor Ready
 
 local Players = game:GetService("Players")
 local UIS = game:GetService("UserInputService")
 local RunService = game:GetService("RunService")
+local Stats = game:GetService("Stats") -- Dideklarasikan untuk akses mudah
 
 local player = Players.LocalPlayer
-local DIST = 50 -- Meskipun tidak digunakan untuk TP, variabel tetap ada.
-local HEADER_HEIGHT = 35 -- Ditingkatkan
-local INFO_HEIGHT = 70 -- Ditingkatkan
-local INITIAL_HEIGHT = 480 
+local DIST = 50 
+local HEADER_HEIGHT = 35 
+local INFO_HEIGHT = 70 
+local INITIAL_HEIGHT = 440 -- Dikurangi karena tombol Minimize dihapus
 local FRAME_WIDTH = 300
 
 -- ===== UTILS =====
@@ -38,11 +39,11 @@ frame.ClipsDescendants = true
 local title = Instance.new("TextLabel", frame)
 title.Name = "Header"
 title.Size = UDim2.new(1,0,0,HEADER_HEIGHT)
-title.Text = "SORA V1 "
+title.Text = "SORA V1 | Bunny Executor"
 title.TextColor3 = Color3.fromRGB(0,255,180)
 title.BackgroundColor3 = Color3.fromRGB(30,30,30)
 title.Font = Enum.Font.Code
-title.TextSize = 18 -- Ditingkatkan
+title.TextSize = 18 
 title.BorderSizePixel = 0
 
 -- 3. ContentFrame (Container untuk semua tombol dan info)
@@ -53,7 +54,7 @@ contentFrame.Position = UDim2.fromOffset(0, HEADER_HEIGHT)
 contentFrame.BackgroundTransparency = 1
 
 local list = Instance.new("UIListLayout", contentFrame)
-list.Padding = UDim.new(0,8) -- Padding ditingkatkan
+list.Padding = UDim.new(0,8) 
 list.HorizontalAlignment = Enum.HorizontalAlignment.Center
 list.SortOrder = Enum.SortOrder.LayoutOrder
 list.FillDirection = Enum.FillDirection.Vertical
@@ -63,18 +64,18 @@ list.VerticalAlignment = Enum.VerticalAlignment.Top
 -- Function to create buttons (ditempatkan di ContentFrame)
 local function btn(text, cb)
     local b = Instance.new("TextButton", contentFrame)
-    b.Size = UDim2.fromOffset(FRAME_WIDTH - 20,40) -- Tinggi tombol ditingkatkan
+    b.Size = UDim2.fromOffset(FRAME_WIDTH - 20,40) 
     b.Text = text
     b.BackgroundColor3 = Color3.fromRGB(40,40,40)
     b.TextColor3 = Color3.new(1,1,1)
     b.Font = Enum.Font.SourceSansBold
-    b.TextSize = 18 -- Ditingkatkan
+    b.TextSize = 18 
     b.BorderSizePixel = 0
     b.MouseButton1Click:Connect(cb)
     return b
 end
 
--- 4. InfoFrame (FPS & Koordinat) - Status Panel
+-- 4. InfoFrame (PING & Koordinat) - Status Panel
 local infoFrame = Instance.new("Frame", contentFrame)
 infoFrame.Name = "InfoFrame"
 infoFrame.Size = UDim2.fromOffset(FRAME_WIDTH - 20, INFO_HEIGHT)
@@ -86,25 +87,28 @@ infoList.HorizontalAlignment = Enum.HorizontalAlignment.Left
 infoList.SortOrder = Enum.SortOrder.LayoutOrder
 infoList.Padding = UDim.new(0,5)
 
+-- COORDINATE LABEL (unchanged size/font)
 local coord = Instance.new("TextLabel", infoFrame)
 coord.Size = UDim2.new(1,0,0,30)
 coord.BackgroundTransparency = 1
 coord.TextWrapped = true
 coord.TextXAlignment = Enum.TextXAlignment.Left
 coord.Text = "POS: X: 0.0 | Y: 0.0 | Z: 0.0"
-coord.TextSize = 16 -- Sesuai permintaan
-coord.Font = Enum.Font.GothamBold -- Sesuai permintaan
-coord.TextColor3 = Color3.fromRGB(220,220,220) -- Sesuai permintaan
+coord.TextSize = 16 
+coord.Font = Enum.Font.GothamBold 
+coord.TextColor3 = Color3.fromRGB(220,220,220) 
 
-local fpsLabel = Instance.new("TextLabel", infoFrame)
-fpsLabel.Size = UDim2.new(1,0,0,25) -- Diperbesar
-fpsLabel.BackgroundTransparency = 1
-fpsLabel.TextXAlignment = Enum.TextXAlignment.Left
-fpsLabel.Text = "FPS: 0"
-local last = tick()
-fpsLabel.TextSize = 18 -- Sesuai permintaan
-fpsLabel.Font = Enum.Font.GothamBold -- Sesuai permintaan
-fpsLabel.TextColor3 = Color3.fromRGB(0,255,180) -- Sesuai permintaan
+-- PING LABEL (Menggantikan fpsLabel)
+local pingLabel = Instance.new("TextLabel", infoFrame)
+pingLabel.Name = "PingLabel"
+pingLabel.Size = UDim2.new(1,0,0,25) 
+pingLabel.BackgroundTransparency = 1
+pingLabel.TextXAlignment = Enum.TextXAlignment.Left
+pingLabel.Text = "PING: -- ms"
+pingLabel.TextSize = 20 -- Ditingkatkan
+pingLabel.Font = Enum.Font.GothamBold -- Ditingkatkan
+pingLabel.TextColor3 = Color3.fromRGB(0,255,180) -- Warna awal (akan diubah dinamis)
+
 
 local separator = Instance.new("Frame", contentFrame) 
 separator.Size = UDim2.fromOffset(FRAME_WIDTH - 20, 2)
@@ -206,16 +210,9 @@ btn("Hide Game UI ON / OFF", function()
 end).LayoutOrder = buttonStartOrder
 buttonStartOrder = buttonStartOrder + 1
 
--- ===== MINIMIZE (Logic Unchanged) =====
-local minimized = false
-btn("Minimize UI", function()
-    minimized = not minimized
-    frame.Size = minimized and UDim2.fromOffset(FRAME_WIDTH, HEADER_HEIGHT) or UDim2.fromOffset(FRAME_WIDTH, INITIAL_HEIGHT)
-end).LayoutOrder = buttonStartOrder
-buttonStartOrder = buttonStartOrder + 1
+-- LOGIKA MINIMIZE DIHAPUS
 
-
--- ===== RENDERSTEPPED LOOP (LOGIC UNCHANGED) =====
+-- ===== RENDERSTEPPED LOOP (PING LOGIC ADDED) =====
 RunService.RenderStepped:Connect(function()
     -- Proper Fly logic
     if fly and bv and bg then
@@ -238,14 +235,21 @@ RunService.RenderStepped:Connect(function()
     if hrp then
         local p = hrp.Position
         coord.Text = string.format(
-            "POS: X: %.1f | Y: %.1f | Z: %.1f", -- Tambahkan label POS
+            "POS: X: %.1f | Y: %.1f | Z: %.1f", 
             p.X, p.Y, p.Z
         )
     end
     
-    -- FPS Counter logic
-    local now = tick()
-    local currentFps = math.floor(1 / (now - last))
-    last = now
-    fpsLabel.Text = "FPS: " .. currentFps
+    -- PING logic (Menggantikan FPS)
+    local ping = Stats.Network.ServerStatsItem["Data Ping"]:GetValue()
+    pingLabel.Text = string.format("PING: %d ms", ping)
+
+    -- Warna berdasarkan Ping
+    if ping < 80 then
+        pingLabel.TextColor3 = Color3.fromRGB(0,255,120) -- Hijau
+    elseif ping < 150 then
+        pingLabel.TextColor3 = Color3.fromRGB(255,200,0) -- Kuning
+    else
+        pingLabel.TextColor3 = Color3.fromRGB(255,80,80) -- Merah
+    end
 end)
