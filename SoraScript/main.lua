@@ -25,10 +25,10 @@ openLogo.Name = "SoraLogo"
 openLogo.Size = UDim2.fromOffset(60, 60)
 openLogo.Position = UDim2.fromScale(0.02, 0.5)
 openLogo.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-openLogo.Visible = false -- Muncul pas di-minimize
+openLogo.Visible = false 
 openLogo.Active = true
 openLogo.Draggable = true 
-openLogo.Image = "rbxassetid://137720121671677" -- ID LOGO KAMU
+openLogo.Image = "rbxassetid://137720121671677" 
 
 local logoCorner = Instance.new("UICorner", openLogo)
 logoCorner.CornerRadius = UDim.new(1, 0)
@@ -118,7 +118,7 @@ scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
 scroll.ScrollBarThickness = 2
 Instance.new("UIListLayout", scroll).Padding = UDim.new(0,5)
 
--- ================= UTILS & REFRESH =================
+-- ================= UTILS =================
 local function HRP()
     local c = player.Character
     return c and c:FindFirstChild("HumanoidRootPart")
@@ -167,6 +167,9 @@ local function createBtn(text)
 end
 
 local fly, noclip, autoXmas = false, false, false
+local lastFishingPos = nil -- PENYIMPAN POSISI SEMULA
+local teleported, returned = false, false
+
 local flyBtn = createBtn("Fly: OFF")
 local noclipBtn = createBtn("Noclip: OFF")
 local tpBtn = createBtn("Teleport To Player")
@@ -196,7 +199,6 @@ tpBtn.MouseButton1Click:Connect(function() playerListFrame.Visible = not playerL
 xmasBtn.MouseButton1Click:Connect(function() autoXmas = not autoXmas; xmasBtn.Text = autoXmas and "Auto Christmas: ON" or "Auto Christmas: OFF" end)
 hideBtn.MouseButton1Click:Connect(function() for _,ui in pairs(player.PlayerGui:GetChildren()) do if ui ~= gui and ui:IsA("ScreenGui") then ui.Enabled = not ui.Enabled end end end)
 
--- LOGIC MINIMIZE (LOGO SWITCH)
 minimize.MouseButton1Click:Connect(function()
     frame.Visible = false
     openLogo.Visible = true
@@ -237,14 +239,35 @@ end)
 
 RunService.Stepped:Connect(function()
     if noclip and player.Character then for _,v in pairs(player.Character:GetDescendants()) do if v:IsA("BasePart") then v.CanCollide = false end end end
+    
     if autoXmas then
         local t = os.date("!*t", workspace:GetServerTimeNow())
         local isEvent = false
         for _,h in pairs(EVENT_HOURS) do if t.hour == h then isEvent = true; break end end
+        
         local hrp = HRP()
-        if hrp and isEvent then
-            if t.min == 0 and t.sec >= 30 then hrp.CFrame = CFrame.new(606.0, -580.6, 8923.3)
-            elseif t.min == 29 and t.sec >= 30 then hrp.CFrame = CFrame.new(1173.1, 23.4, 1565.1) end
+        if hrp then
+            -- PERGI KE EVENT + SAVE POSISI ASLI
+            if isEvent and t.min == 0 and t.sec >= 30 and not teleported then
+                lastFishingPos = hrp.CFrame -- CATAT TITIK MANCING KAMU
+                hrp.CFrame = CFrame.new(606.0, -580.6, 8923.3)
+                teleported = true
+                returned = false
+            -- BALIK KE POSISI ASLI PAS EVENT KELAR
+            elseif t.min == 29 and t.sec >= 30 and teleported and not returned then
+                if lastFishingPos then
+                    hrp.CFrame = lastFishingPos
+                else
+                    hrp.CFrame = CFrame.new(1173.1, 23.4, 1565.1) -- Cadangan
+                end
+                returned = true
+            end
+            
+            -- RESET STATUS
+            if not isEvent then
+                teleported = false
+                returned = false
+            end
         end
     end
 end)
