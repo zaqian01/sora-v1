@@ -28,7 +28,7 @@ openLogo.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 openLogo.Visible = false 
 openLogo.Active = true
 openLogo.Draggable = true 
-openLogo.Image = "rbxassetid://137720121671677" 
+openLogo.Image = "rbxassetid://86170889168529" 
 
 local logoCorner = Instance.new("UICorner", openLogo)
 logoCorner.CornerRadius = UDim.new(1, 0)
@@ -271,3 +271,4 @@ RunService.Stepped:Connect(function()
         end
     end
 end)
+
