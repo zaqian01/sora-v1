@@ -19,6 +19,25 @@ local gui = Instance.new("ScreenGui", player.PlayerGui)
 gui.Name = "SORA"
 gui.ResetOnSpawn = false
 
+-- ================= FLOATING LOGO (SERAPHINE STYLE) =================
+local openLogo = Instance.new("ImageButton", gui)
+openLogo.Name = "SoraLogo"
+openLogo.Size = UDim2.fromOffset(60, 60)
+openLogo.Position = UDim2.fromScale(0.02, 0.5)
+openLogo.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+openLogo.Visible = false -- Muncul pas di-minimize
+openLogo.Active = true
+openLogo.Draggable = true 
+openLogo.Image = "rbxassetid://137720121671677" -- ID LOGO KAMU
+
+local logoCorner = Instance.new("UICorner", openLogo)
+logoCorner.CornerRadius = UDim.new(1, 0)
+
+local logoStroke = Instance.new("UIStroke", openLogo)
+logoStroke.Color = Color3.fromRGB(0, 255, 180)
+logoStroke.Thickness = 2
+
+-- ================= MAIN PANEL =================
 local frame = Instance.new("Frame", gui)
 frame.Size = UDim2.fromOffset(300, 450)
 frame.Position = UDim2.fromScale(0.05, 0.2)
@@ -26,7 +45,6 @@ frame.BackgroundColor3 = Color3.fromRGB(18,18,18)
 frame.BorderSizePixel = 0
 frame.Active = true
 frame.Draggable = true
-
 Instance.new("UICorner", frame).CornerRadius = UDim.new(0,10)
 
 -- ================= HEADER =================
@@ -82,22 +100,14 @@ xmasCountdown.BackgroundTransparency = 1
 xmasCountdown.TextColor3 = Color3.fromRGB(255,200,0)
 xmasCountdown.Font = Enum.Font.GothamBold
 xmasCountdown.TextSize = 13
-xmasCountdown.Text = "Next Event: --:--:--"
 
--- ================= PLAYER LIST PANEL (DI SEBELAH KANAN) =================
+-- ================= PLAYER LIST PANEL =================
 local playerListFrame = Instance.new("Frame", frame)
 playerListFrame.Size = UDim2.fromOffset(200, 300)
-playerListFrame.Position = UDim2.new(1, 10, 0, 0) -- Berada di kanan Panel Sora
+playerListFrame.Position = UDim2.new(1, 15, 0, 0) 
 playerListFrame.BackgroundColor3 = Color3.fromRGB(25,25,25)
 playerListFrame.Visible = false
 Instance.new("UICorner", playerListFrame).CornerRadius = UDim.new(0,8)
-
-local plTitle = Instance.new("TextLabel", playerListFrame)
-plTitle.Size = UDim2.new(1,0,0,30)
-plTitle.Text = "Teleport To"
-plTitle.TextColor3 = Color3.fromRGB(0,255,180)
-plTitle.Font = Enum.Font.GothamBold
-plTitle.BackgroundTransparency = 1
 
 local scroll = Instance.new("ScrollingFrame", playerListFrame)
 scroll.Position = UDim2.fromOffset(5,35)
@@ -108,25 +118,12 @@ scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y
 scroll.ScrollBarThickness = 2
 Instance.new("UIListLayout", scroll).Padding = UDim.new(0,5)
 
--- ================= UTILS =================
+-- ================= UTILS & REFRESH =================
 local function HRP()
     local c = player.Character
     return c and c:FindFirstChild("HumanoidRootPart")
 end
 
-local function createBtn(text, parent)
-    local b = Instance.new("TextButton", parent)
-    b.Size = UDim2.new(0, 280, 0, 36)
-    b.BackgroundColor3 = Color3.fromRGB(35,35,35)
-    b.Text = text
-    b.Font = Enum.Font.GothamBold
-    b.TextSize = 13
-    b.TextColor3 = Color3.new(1,1,1)
-    Instance.new("UICorner", b).CornerRadius = UDim.new(0,6)
-    return b
-end
-
--- ================= PLAYER LIST LOGIC =================
 local function refreshPlayerList()
     for _,c in pairs(scroll:GetChildren()) do if c:IsA("TextButton") then c:Destroy() end end
     for _,plr in pairs(Players:GetPlayers()) do
@@ -157,14 +154,26 @@ contentScroll.ScrollBarThickness = 0
 Instance.new("UIListLayout", contentScroll).HorizontalAlignment = Enum.HorizontalAlignment.Center
 Instance.new("UIListLayout", contentScroll).Padding = UDim.new(0,8)
 
--- Fly & Noclip & TP
-local fly, noclip, autoXmas = false, false, false
-local flyBtn = createBtn("Fly: OFF", contentScroll)
-local noclipBtn = createBtn("Noclip: OFF", contentScroll)
-local tpBtn = createBtn("Teleport To Player", contentScroll)
-local xmasBtn = createBtn("Auto Christmas: OFF", contentScroll)
-local hideBtn = createBtn("Hide Game UI", contentScroll)
+local function createBtn(text)
+    local b = Instance.new("TextButton", contentScroll)
+    b.Size = UDim2.new(0, 280, 0, 36)
+    b.BackgroundColor3 = Color3.fromRGB(35,35,35)
+    b.Text = text
+    b.Font = Enum.Font.GothamBold
+    b.TextSize = 13
+    b.TextColor3 = Color3.new(1,1,1)
+    Instance.new("UICorner", b).CornerRadius = UDim.new(0,6)
+    return b
+end
 
+local fly, noclip, autoXmas = false, false, false
+local flyBtn = createBtn("Fly: OFF")
+local noclipBtn = createBtn("Noclip: OFF")
+local tpBtn = createBtn("Teleport To Player")
+local xmasBtn = createBtn("Auto Christmas: OFF")
+local hideBtn = createBtn("Hide Game UI")
+
+-- HANDLERS
 flyBtn.MouseButton1Click:Connect(function()
     fly = not fly
     flyBtn.Text = fly and "Fly: ON" or "Fly: OFF"
@@ -187,14 +196,18 @@ tpBtn.MouseButton1Click:Connect(function() playerListFrame.Visible = not playerL
 xmasBtn.MouseButton1Click:Connect(function() autoXmas = not autoXmas; xmasBtn.Text = autoXmas and "Auto Christmas: ON" or "Auto Christmas: OFF" end)
 hideBtn.MouseButton1Click:Connect(function() for _,ui in pairs(player.PlayerGui:GetChildren()) do if ui ~= gui and ui:IsA("ScreenGui") then ui.Enabled = not ui.Enabled end end end)
 
+-- LOGIC MINIMIZE (LOGO SWITCH)
 minimize.MouseButton1Click:Connect(function()
-    local minimized = (minimize.Text == "–")
-    frame:TweenSize(minimized and UDim2.fromOffset(300,40) or UDim2.fromOffset(300,450), "Out", "Quad", 0.2, true)
-    contentScroll.Visible = not minimized; infoFrame.Visible = not minimized; playerListFrame.Visible = false
-    minimize.Text = minimized and "+" or "–"
+    frame.Visible = false
+    openLogo.Visible = true
 end)
 
--- ================= LOOPS & COUNTDOWN =================
+openLogo.MouseButton1Click:Connect(function()
+    openLogo.Visible = false
+    frame.Visible = true
+end)
+
+-- ================= LOOPS =================
 local EVENT_HOURS = {0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22}
 
 RunService.RenderStepped:Connect(function()
@@ -202,13 +215,11 @@ RunService.RenderStepped:Connect(function()
     if hrp then coordLabel.Text = string.format("POS: X:%.1f Y:%.1f Z:%.1f", hrp.Position.X, hrp.Position.Y, hrp.Position.Z) end
     pingLabel.Text = string.format("PING: %d ms", Stats.Network.ServerStatsItem["Data Ping"]:GetValue())
     
-    -- Countdown Logic
     local t = os.date("!*t", workspace:GetServerTimeNow())
     local nextH = 0
     for _,h in pairs(EVENT_HOURS) do if h > t.hour then nextH = h; break end end
     local diff = os.time({year=t.year, month=t.month, day=t.day, hour=nextH, min=0, sec=0}) - workspace:GetServerTimeNow()
-    local ch, cm, cs = math.floor(diff/3600), math.floor((diff%3600)/60), math.floor(diff%60)
-    xmasCountdown.Text = string.format("Next Event: %02d:%02d:%02d", ch, cm, cs)
+    xmasCountdown.Text = string.format("Next Event: %02d:%02d:%02d", math.floor(diff/3600), math.floor((diff%3600)/60), math.floor(diff%60))
 
     if fly and hrp and hrp:FindFirstChild("SoraFly") then
         local cam = workspace.CurrentCamera
