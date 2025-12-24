@@ -16,19 +16,20 @@ end)
 
 -- ================= GUI ROOT =================
 local gui = Instance.new("ScreenGui", player.PlayerGui)
-gui.Name = "SORA_FINAL"
+gui.Name = "SORA_V4_FIXED"
 gui.ResetOnSpawn = false
 
 -- ================= FLOATING LOGO =================
 local openLogo = Instance.new("ImageButton", gui)
 openLogo.Name = "SoraLogo"
-openLogo.Size = UDim2.fromOffset(60, 60)
+openLogo.Size = UDim2.fromOffset(65, 65)
 openLogo.Position = UDim2.fromScale(0.02, 0.5)
 openLogo.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 openLogo.Visible = false 
 openLogo.Active = true
 openLogo.Draggable = true 
-openLogo.Image = "rbxassetid://86170889168529" -- LOGO BARU
+-- PAKAI IMAGE ID (BUKAN DECAL ID)
+openLogo.Image = "rbxassetid://121708890943260" 
 
 local logoCorner = Instance.new("UICorner", openLogo)
 logoCorner.CornerRadius = UDim.new(1, 0)
@@ -52,90 +53,58 @@ header.BackgroundColor3 = Color3.fromRGB(25,25,25)
 Instance.new("UICorner", header).CornerRadius = UDim.new(0,10)
 
 local title = Instance.new("TextLabel", header)
-title.Size = UDim2.new(1,-50,1,0)
-title.Position = UDim2.fromOffset(12,0)
-title.BackgroundTransparency = 1
-title.Text = "SORA HUB"
-title.TextColor3 = Color3.fromRGB(0,255,180)
-title.Font = Enum.Font.GothamBold
-title.TextSize = 18
-title.TextXAlignment = Enum.TextXAlignment.Left
+title.Size = UDim2.new(1,-50,1,0); title.Position = UDim2.fromOffset(12,0); title.BackgroundTransparency = 1; title.Text = "SORA HUB V4.6"; title.TextColor3 = Color3.fromRGB(0,255,180); title.Font = Enum.Font.GothamBold; title.TextSize = 18; title.TextXAlignment = Enum.TextXAlignment.Left
 
 local minimize = Instance.new("TextButton", header)
-minimize.Size = UDim2.fromOffset(36,26)
-minimize.Position = UDim2.new(1, -10, 0.5, 0)
-minimize.AnchorPoint = Vector2.new(1,0.5)
-minimize.BackgroundColor3 = Color3.fromRGB(40,40,40)
-minimize.Text = "–"
-minimize.TextColor3 = Color3.new(1,1,1)
+minimize.Size = UDim2.fromOffset(36,26); minimize.Position = UDim2.new(1, -10, 0.5, 0); minimize.AnchorPoint = Vector2.new(1,0.5); minimize.BackgroundColor3 = Color3.fromRGB(40,40,40); minimize.Text = "–"; minimize.TextColor3 = Color3.new(1,1,1)
 Instance.new("UICorner", minimize).CornerRadius = UDim.new(0,6)
 
 -- INFO DISPLAY
 local infoFrame = Instance.new("Frame", frame)
-infoFrame.Size = UDim2.new(1, 0, 0, 80)
-infoFrame.Position = UDim2.fromOffset(0, 40)
-infoFrame.BackgroundTransparency = 1
+infoFrame.Size = UDim2.new(1, 0, 0, 80); infoFrame.Position = UDim2.fromOffset(0, 40); infoFrame.BackgroundTransparency = 1
 
 local coordLabel = Instance.new("TextLabel", infoFrame)
-coordLabel.Size = UDim2.new(1,0,0,25); coordLabel.BackgroundTransparency = 1; coordLabel.TextColor3 = Color3.fromRGB(200,200,200); coordLabel.Font = Enum.Font.Code; coordLabel.TextSize = 12
+coordLabel.Size = UDim2.new(1,0,0,25); coordLabel.BackgroundTransparency = 1; coordLabel.TextColor3 = Color3.fromRGB(200,200,200); coordLabel.Font = Enum.Font.Code; coordLabel.TextSize = 11
 local pingLabel = Instance.new("TextLabel", infoFrame)
-pingLabel.Size = UDim2.new(1,0,0,25); pingLabel.Position = UDim2.fromOffset(0, 22); pingLabel.BackgroundTransparency = 1; pingLabel.TextColor3 = Color3.fromRGB(0,255,180); pingLabel.Font = Enum.Font.GothamBold; pingLabel.TextSize = 13
+pingLabel.Size = UDim2.new(1,0,0,25); pingLabel.Position = UDim2.fromOffset(0, 20); pingLabel.BackgroundTransparency = 1; pingLabel.TextColor3 = Color3.fromRGB(0,255,180); pingLabel.Font = Enum.Font.GothamBold; pingLabel.TextSize = 13
 local xmasCountdown = Instance.new("TextLabel", infoFrame)
-xmasCountdown.Size = UDim2.new(1,0,0,25); xmasCountdown.Position = UDim2.fromOffset(0, 45); xmasCountdown.BackgroundTransparency = 1; xmasCountdown.TextColor3 = Color3.fromRGB(255,200,0); xmasCountdown.Font = Enum.Font.GothamBold; xmasCountdown.TextSize = 13
+xmasCountdown.Size = UDim2.new(1,0,0,25); xmasCountdown.Position = UDim2.fromOffset(0, 40); xmasCountdown.BackgroundTransparency = 1; xmasCountdown.TextColor3 = Color3.fromRGB(255,200,0); xmasCountdown.Font = Enum.Font.GothamBold; xmasCountdown.TextSize = 13
 
--- ================= SIDE PANEL: SPOTS (LEFT) =================
+-- ================= SIDE PANELS =================
 local spotFrame = Instance.new("Frame", frame)
-spotFrame.Size = UDim2.fromOffset(180, 200)
-spotFrame.Position = UDim2.new(0, -190, 0, 0)
-spotFrame.BackgroundColor3 = Color3.fromRGB(25,25,25)
-spotFrame.Visible = false
+spotFrame.Size = UDim2.fromOffset(180, 200); spotFrame.Position = UDim2.new(0, -190, 0, 0); spotFrame.BackgroundColor3 = Color3.fromRGB(25,25,25); spotFrame.Visible = false
 Instance.new("UICorner", spotFrame).CornerRadius = UDim.new(0,8)
 
-local spotTitle = Instance.new("TextLabel", spotFrame)
-spotTitle.Size = UDim2.new(1,0,0,35); spotTitle.Text = "Event Spots"; spotTitle.TextColor3 = Color3.fromRGB(0,255,180); spotTitle.Font = Enum.Font.GothamBold; spotTitle.BackgroundTransparency = 1
-
-local spotList = Instance.new("ScrollingFrame", spotFrame)
-spotList.Position = UDim2.fromOffset(5,35); spotList.Size = UDim2.new(1,-10,1,-45); spotList.BackgroundTransparency = 1; spotList.ScrollBarThickness = 0
-local spotLayout = Instance.new("UIListLayout", spotList); spotLayout.Padding = UDim.new(0,5)
-
-local SPOTS = {
-    ["Spot 1"] = CFrame.new(606.0, -580.6, 8923.3),
-    ["Spot 2"] = CFrame.new(603.4, -580.6, 8886.0),
-    ["Spot 3"] = CFrame.new(576.8, -580.7, 8845.8),
-    ["Spot 4"] = CFrame.new(774.6, -487.2, 8923.0)
-}
-local selectedSpot = SPOTS["Spot 1"]
-
-for name, cf in pairs(SPOTS) do
-    local b = Instance.new("TextButton", spotList)
-    b.Size = UDim2.new(1, 0, 0, 30); b.BackgroundColor3 = Color3.fromRGB(45,45,45); b.Text = name; b.TextColor3 = Color3.new(1,1,1); b.Font = Enum.Font.Gotham; b.TextSize = 12
-    Instance.new("UICorner", b).CornerRadius = UDim.new(0,4)
-    b.MouseButton1Click:Connect(function() 
-        selectedSpot = cf
-        spotTitle.Text = "Active: " .. name
-    end)
-end
-
--- ================= PLAYER LIST PANEL (RIGHT) =================
 local playerListFrame = Instance.new("Frame", frame)
-playerListFrame.Size = UDim2.fromOffset(200, 300)
-playerListFrame.Position = UDim2.new(1, 15, 0, 0) 
-playerListFrame.BackgroundColor3 = Color3.fromRGB(25,25,25)
-playerListFrame.Visible = false
+playerListFrame.Size = UDim2.fromOffset(200, 300); playerListFrame.Position = UDim2.new(1, 15, 0, 0); playerListFrame.BackgroundColor3 = Color3.fromRGB(25,25,25); playerListFrame.Visible = false
 Instance.new("UICorner", playerListFrame).CornerRadius = UDim.new(0,8)
 
 local scroll = Instance.new("ScrollingFrame", playerListFrame)
 scroll.Position = UDim2.fromOffset(5,35); scroll.Size = UDim2.new(1,-10,1,-45); scroll.BackgroundTransparency = 1; scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y; scroll.ScrollBarThickness = 2
 Instance.new("UIListLayout", scroll).Padding = UDim.new(0,5)
 
--- ================= UTILS & FLY SPEED =================
-local fly, flySpeed, noclip, autoXmas = false, 60, false, false
+-- ================= UTILS & FLY =================
+local fly, flySpeed, noclip, autoXmas = false, 100, false, false
 local lastFishingPos = nil
 local teleported, returned = false, false
 
 local function HRP()
-    local c = player.Character
-    return c and c:FindFirstChild("HumanoidRootPart")
+    return player.Character and player.Character:FindFirstChild("HumanoidRootPart")
+end
+
+local function refreshPlayerList()
+    for _,c in pairs(scroll:GetChildren()) do if c:IsA("TextButton") then c:Destroy() end end
+    for _,plr in pairs(Players:GetPlayers()) do
+        if plr ~= player then
+            local b = Instance.new("TextButton", scroll)
+            b.Size = UDim2.new(1, 0, 0, 30); b.BackgroundColor3 = Color3.fromRGB(45,45,45); b.Text = " " .. plr.DisplayName; b.TextColor3 = Color3.new(1,1,1); b.TextXAlignment = Enum.TextXAlignment.Left; b.Font = Enum.Font.Gotham; b.TextSize = 12
+            Instance.new("UICorner", b).CornerRadius = UDim.new(0,4)
+            b.MouseButton1Click:Connect(function()
+                local hrp, th = HRP(), plr.Character and plr.Character:FindFirstChild("HumanoidRootPart")
+                if hrp and th then hrp.CFrame = th.CFrame * CFrame.new(0,0,3) end
+            end)
+        end
+    end
 end
 
 -- ================= FEATURES AREA =================
@@ -150,23 +119,23 @@ local function createBtn(text)
     return b
 end
 
--- FLY SPEED SLIDER UI
+-- SPEED SLIDER (Range 100 - 500)
 local sliderFrame = Instance.new("Frame", contentScroll)
 sliderFrame.Size = UDim2.new(0, 270, 0, 45); sliderFrame.BackgroundTransparency = 1
 local sliderLabel = Instance.new("TextLabel", sliderFrame)
-sliderLabel.Size = UDim2.new(1,0,0,20); sliderLabel.Text = "Fly Speed: " .. flySpeed; sliderLabel.TextColor3 = Color3.new(1,1,1); sliderLabel.BackgroundTransparency = 1; sliderLabel.Font = Enum.Font.Gotham
+sliderLabel.Size = UDim2.new(1,0,0,20); sliderLabel.Text = "Fly Speed: " .. flySpeed; sliderLabel.TextColor3 = Color3.new(1,1,1); sliderLabel.BackgroundTransparency = 1; sliderLabel.Font = Enum.Font.GothamBold
 local sliderBar = Instance.new("TextButton", sliderFrame)
 sliderBar.Size = UDim2.new(0, 250, 0, 6); sliderBar.Position = UDim2.fromOffset(10, 25); sliderBar.BackgroundColor3 = Color3.fromRGB(50,50,50); sliderBar.Text = ""
 local sliderFill = Instance.new("Frame", sliderBar)
-sliderFill.Size = UDim2.fromScale(flySpeed/200, 1); sliderFill.BackgroundColor3 = Color3.fromRGB(0, 255, 180); sliderFill.BorderSizePixel = 0
+sliderFill.Size = UDim2.fromScale((flySpeed-100)/400, 1); sliderFill.BackgroundColor3 = Color3.fromRGB(0, 255, 180); sliderFill.BorderSizePixel = 0
 
 sliderBar.MouseButton1Down:Connect(function()
     local moveCon
     moveCon = UIS.InputChanged:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-            local relativeX = math.clamp((input.Position.X - sliderBar.AbsolutePosition.X) / sliderBar.AbsoluteSize.X, 0, 1)
-            flySpeed = math.floor(relativeX * 200)
-            sliderFill.Size = UDim2.fromScale(relativeX, 1)
+            local rel = math.clamp((input.Position.X - sliderBar.AbsolutePosition.X) / sliderBar.AbsoluteSize.X, 0, 1)
+            flySpeed = math.floor(100 + (rel * 400))
+            sliderFill.Size = UDim2.fromScale(rel, 1)
             sliderLabel.Text = "Fly Speed: " .. flySpeed
         end
     end)
@@ -187,8 +156,8 @@ flyBtn.MouseButton1Click:Connect(function()
     fly = not fly; flyBtn.Text = fly and "Fly: ON" or "Fly: OFF"
     local hrp = HRP()
     if fly and hrp then
-        local bv = Instance.new("BodyVelocity", hrp); bv.Name = "SoraFly"; bv.MaxForce = Vector3.new(1e5,1e5,1e5)
-        local bg = Instance.new("BodyGyro", hrp); bg.Name = "SoraGyro"; bg.MaxTorque = Vector3.new(1e5,1e5,1e5)
+        local bv = Instance.new("BodyVelocity", hrp); bv.Name = "SoraFly"; bv.MaxForce = Vector3.new(1e6,1e6,1e6)
+        local bg = Instance.new("BodyGyro", hrp); bg.Name = "SoraGyro"; bg.MaxTorque = Vector3.new(1e6,1e6,1e6)
         player.Character.Humanoid.PlatformStand = true
     else
         if HRP() then
@@ -199,20 +168,18 @@ flyBtn.MouseButton1Click:Connect(function()
     end
 end)
 
-noclipBtn.MouseButton1Click:Connect(function() noclip = not noclip; noclipBtn.Text = noclip and "Noclip: ON" or "Noclip: OFF" end)
-tpBtn.MouseButton1Click:Connect(function() playerListFrame.Visible = not playerListFrame.Visible; spotFrame.Visible = false end)
-spotBtn.MouseButton1Click:Connect(function() spotFrame.Visible = not spotFrame.Visible; playerListFrame.Visible = false end)
-xmasBtn.MouseButton1Click:Connect(function() autoXmas = not autoXmas; xmasBtn.Text = autoXmas and "Auto Christmas: ON" or "Auto Christmas: OFF" end)
+tpBtn.MouseButton1Click:Connect(function()
+    playerListFrame.Visible = not playerListFrame.Visible
+    spotFrame.Visible = false
+    if playerListFrame.Visible then refreshPlayerList() end
+end)
 
--- FIXED HIDE UI
 local uiHidden = false
 hideBtn.MouseButton1Click:Connect(function()
     uiHidden = not uiHidden
     hideBtn.Text = uiHidden and "Show Game UI" or "Hide Game UI"
     for _, v in pairs(player.PlayerGui:GetChildren()) do
-        if v:IsA("ScreenGui") and v.Name ~= gui.Name then
-            v.Enabled = not uiHidden
-        end
+        if v:IsA("ScreenGui") and v.Name ~= gui.Name then v.Enabled = not uiHidden end
     end
 end)
 
@@ -225,7 +192,7 @@ local EVENT_HOURS = {0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22}
 RunService.RenderStepped:Connect(function()
     local hrp = HRP()
     if hrp then coordLabel.Text = string.format("POS: X:%.1f Y:%.1f Z:%.1f", hrp.Position.X, hrp.Position.Y, hrp.Position.Z) end
-    pingLabel.Text = string.format("PING: %d ms", Stats.Network.ServerStatsItem["Data Ping"]:GetValue())
+    pingLabel.Text = "PING: " .. Stats.Network.ServerStatsItem["Data Ping"]:GetValue() .. " ms"
     
     local t = os.date("!*t", workspace:GetServerTimeNow())
     local nextH = 24
@@ -244,26 +211,5 @@ RunService.RenderStepped:Connect(function()
         if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then dir -= Vector3.new(0,1,0) end
         hrp.SoraFly.Velocity = dir.Magnitude > 0 and dir.Unit * flySpeed or Vector3.zero
         hrp.SoraGyro.CFrame = cam.CFrame
-    end
-end)
-
-RunService.Stepped:Connect(function()
-    if noclip and player.Character then for _,v in pairs(player.Character:GetDescendants()) do if v:IsA("BasePart") then v.CanCollide = false end end end
-    if autoXmas then
-        local t = os.date("!*t", workspace:GetServerTimeNow())
-        local isEvent = false
-        for _,h in pairs(EVENT_HOURS) do if t.hour == h then isEvent = true; break end end
-        local hrp = HRP()
-        if hrp then
-            if isEvent and t.min == 0 and t.sec >= 30 and not teleported then
-                lastFishingPos = hrp.CFrame
-                hrp.CFrame = selectedSpot -- TP KE SPOT YANG DIPILIH
-                teleported = true; returned = false
-            elseif t.min == 29 and t.sec >= 30 and teleported and not returned then
-                hrp.CFrame = lastFishingPos or CFrame.new(1173.1, 23.4, 1565.1)
-                returned = true
-            end
-            if not isEvent then teleported = false; returned = false end
-        end
     end
 end)
