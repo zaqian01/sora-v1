@@ -16,7 +16,7 @@ end)
 
 -- ================= GUI ROOT =================
 local gui = Instance.new("ScreenGui", player.PlayerGui)
-gui.Name = "SORA_V4_FIXED"
+gui.Name = "SORA_V4_7"
 gui.ResetOnSpawn = false
 
 -- ================= FLOATING LOGO =================
@@ -28,7 +28,7 @@ openLogo.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 openLogo.Visible = false 
 openLogo.Active = true
 openLogo.Draggable = true 
--- PAKAI IMAGE ID (BUKAN DECAL ID)
+-- Mencoba Image ID hasil konversi manual
 openLogo.Image = "rbxassetid://121708890943260" 
 
 local logoCorner = Instance.new("UICorner", openLogo)
@@ -53,16 +53,15 @@ header.BackgroundColor3 = Color3.fromRGB(25,25,25)
 Instance.new("UICorner", header).CornerRadius = UDim.new(0,10)
 
 local title = Instance.new("TextLabel", header)
-title.Size = UDim2.new(1,-50,1,0); title.Position = UDim2.fromOffset(12,0); title.BackgroundTransparency = 1; title.Text = "SORA HUB V4.6"; title.TextColor3 = Color3.fromRGB(0,255,180); title.Font = Enum.Font.GothamBold; title.TextSize = 18; title.TextXAlignment = Enum.TextXAlignment.Left
+title.Size = UDim2.new(1,-50,1,0); title.Position = UDim2.fromOffset(12,0); title.BackgroundTransparency = 1; title.Text = "SORA HUB V4.7"; title.TextColor3 = Color3.fromRGB(0,255,180); title.Font = Enum.Font.GothamBold; title.TextSize = 18; title.TextXAlignment = Enum.TextXAlignment.Left
 
 local minimize = Instance.new("TextButton", header)
 minimize.Size = UDim2.fromOffset(36,26); minimize.Position = UDim2.new(1, -10, 0.5, 0); minimize.AnchorPoint = Vector2.new(1,0.5); minimize.BackgroundColor3 = Color3.fromRGB(40,40,40); minimize.Text = "–"; minimize.TextColor3 = Color3.new(1,1,1)
 Instance.new("UICorner", minimize).CornerRadius = UDim.new(0,6)
 
--- INFO DISPLAY
+-- INFO BOX
 local infoFrame = Instance.new("Frame", frame)
 infoFrame.Size = UDim2.new(1, 0, 0, 80); infoFrame.Position = UDim2.fromOffset(0, 40); infoFrame.BackgroundTransparency = 1
-
 local coordLabel = Instance.new("TextLabel", infoFrame)
 coordLabel.Size = UDim2.new(1,0,0,25); coordLabel.BackgroundTransparency = 1; coordLabel.TextColor3 = Color3.fromRGB(200,200,200); coordLabel.Font = Enum.Font.Code; coordLabel.TextSize = 11
 local pingLabel = Instance.new("TextLabel", infoFrame)
@@ -71,19 +70,46 @@ local xmasCountdown = Instance.new("TextLabel", infoFrame)
 xmasCountdown.Size = UDim2.new(1,0,0,25); xmasCountdown.Position = UDim2.fromOffset(0, 40); xmasCountdown.BackgroundTransparency = 1; xmasCountdown.TextColor3 = Color3.fromRGB(255,200,0); xmasCountdown.Font = Enum.Font.GothamBold; xmasCountdown.TextSize = 13
 
 -- ================= SIDE PANELS =================
+-- FIX: PICK SPOT PANEL (LEFT)
 local spotFrame = Instance.new("Frame", frame)
-spotFrame.Size = UDim2.fromOffset(180, 200); spotFrame.Position = UDim2.new(0, -190, 0, 0); spotFrame.BackgroundColor3 = Color3.fromRGB(25,25,25); spotFrame.Visible = false
+spotFrame.Size = UDim2.fromOffset(180, 220); spotFrame.Position = UDim2.new(0, -190, 0, 0); spotFrame.BackgroundColor3 = Color3.fromRGB(25,25,25); spotFrame.Visible = false
 Instance.new("UICorner", spotFrame).CornerRadius = UDim.new(0,8)
 
+local spotTitle = Instance.new("TextLabel", spotFrame)
+spotTitle.Size = UDim2.new(1,0,0,35); spotTitle.Text = "Event Spot Picker"; spotTitle.TextColor3 = Color3.fromRGB(255,200,0); spotTitle.Font = Enum.Font.GothamBold; spotTitle.BackgroundTransparency = 1; spotTitle.TextSize = 12
+
+local spotList = Instance.new("ScrollingFrame", spotFrame)
+spotList.Position = UDim2.fromOffset(5,35); spotList.Size = UDim2.new(1,-10,1,-45); spotList.BackgroundTransparency = 1; spotList.ScrollBarThickness = 0
+local spotLayout = Instance.new("UIListLayout", spotList); spotLayout.Padding = UDim.new(0,5)
+
+local SPOTS = {
+    ["Spot 1"] = CFrame.new(606.0, -580.6, 8923.3),
+    ["Spot 2"] = CFrame.new(603.4, -580.6, 8886.0),
+    ["Spot 3"] = CFrame.new(576.8, -580.7, 8845.8),
+    ["Spot 4"] = CFrame.new(774.6, -487.2, 8923.0)
+}
+_G.SelectedEventSpot = SPOTS["Spot 1"] -- Menggunakan Global agar tidak hilang saat loop
+
+for name, cf in pairs(SPOTS) do
+    local b = Instance.new("TextButton", spotList)
+    b.Size = UDim2.new(1, 0, 0, 30); b.BackgroundColor3 = Color3.fromRGB(45,45,45); b.Text = name; b.TextColor3 = Color3.new(1,1,1); b.Font = Enum.Font.Gotham; b.TextSize = 12
+    Instance.new("UICorner", b).CornerRadius = UDim.new(0,4)
+    b.MouseButton1Click:Connect(function() 
+        _G.SelectedEventSpot = cf
+        spotTitle.Text = "Active: " .. name
+        warn("SORA: Spot diubah ke " .. name)
+    end)
+end
+
+-- PLAYER LIST PANEL (RIGHT)
 local playerListFrame = Instance.new("Frame", frame)
 playerListFrame.Size = UDim2.fromOffset(200, 300); playerListFrame.Position = UDim2.new(1, 15, 0, 0); playerListFrame.BackgroundColor3 = Color3.fromRGB(25,25,25); playerListFrame.Visible = false
 Instance.new("UICorner", playerListFrame).CornerRadius = UDim.new(0,8)
-
 local scroll = Instance.new("ScrollingFrame", playerListFrame)
 scroll.Position = UDim2.fromOffset(5,35); scroll.Size = UDim2.new(1,-10,1,-45); scroll.BackgroundTransparency = 1; scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y; scroll.ScrollBarThickness = 2
 Instance.new("UIListLayout", scroll).Padding = UDim.new(0,5)
 
--- ================= UTILS & FLY =================
+-- ================= LOGIC & HANDLERS =================
 local fly, flySpeed, noclip, autoXmas = false, 100, false, false
 local lastFishingPos = nil
 local teleported, returned = false, false
@@ -110,7 +136,7 @@ end
 -- ================= FEATURES AREA =================
 local contentScroll = Instance.new("ScrollingFrame", frame)
 contentScroll.Position = UDim2.fromOffset(0, 130); contentScroll.Size = UDim2.new(1,0,1,-140); contentScroll.BackgroundTransparency = 1; contentScroll.ScrollBarThickness = 0
-Instance.new("UIListLayout", contentScroll).HorizontalAlignment = Enum.HorizontalAlignment.Center; Instance.new("UIListLayout", contentScroll).Padding = UDim.new(0,8)
+local contentLayout = Instance.new("UIListLayout", contentScroll); contentLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center; contentLayout.Padding = UDim.new(0,8)
 
 local function createBtn(text)
     local b = Instance.new("TextButton", contentScroll)
@@ -119,7 +145,7 @@ local function createBtn(text)
     return b
 end
 
--- SPEED SLIDER (Range 100 - 500)
+-- SPEED SLIDER (100 - 500)
 local sliderFrame = Instance.new("Frame", contentScroll)
 sliderFrame.Size = UDim2.new(0, 270, 0, 45); sliderFrame.BackgroundTransparency = 1
 local sliderLabel = Instance.new("TextLabel", sliderFrame)
@@ -139,9 +165,7 @@ sliderBar.MouseButton1Down:Connect(function()
             sliderLabel.Text = "Fly Speed: " .. flySpeed
         end
     end)
-    UIS.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then moveCon:Disconnect() end
-    end)
+    UIS.InputEnded:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then moveCon:Disconnect() end end)
 end)
 
 local flyBtn = createBtn("Fly: OFF")
@@ -168,11 +192,15 @@ flyBtn.MouseButton1Click:Connect(function()
     end
 end)
 
-tpBtn.MouseButton1Click:Connect(function()
-    playerListFrame.Visible = not playerListFrame.Visible
-    spotFrame.Visible = false
+noclipBtn.MouseButton1Click:Connect(function() noclip = not noclip; noclipBtn.Text = noclip and "Noclip: ON" or "Noclip: OFF" end)
+tpBtn.MouseButton1Click:Connect(function() 
+    playerListFrame.Visible = not playerListFrame.Visible; spotFrame.Visible = false
     if playerListFrame.Visible then refreshPlayerList() end
 end)
+spotBtn.MouseButton1Click:Connect(function() 
+    spotFrame.Visible = not spotFrame.Visible; playerListFrame.Visible = false
+end)
+xmasBtn.MouseButton1Click:Connect(function() autoXmas = not autoXmas; xmasBtn.Text = autoXmas and "Auto Christmas: ON" or "Auto Christmas: OFF" end)
 
 local uiHidden = false
 hideBtn.MouseButton1Click:Connect(function()
@@ -186,7 +214,7 @@ end)
 minimize.MouseButton1Click:Connect(function() frame.Visible = false; openLogo.Visible = true; spotFrame.Visible = false; playerListFrame.Visible = false end)
 openLogo.MouseButton1Click:Connect(function() openLogo.Visible = false; frame.Visible = true end)
 
--- LOOPS
+-- ================= LOOPS =================
 local EVENT_HOURS = {0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22}
 
 RunService.RenderStepped:Connect(function()
@@ -211,5 +239,36 @@ RunService.RenderStepped:Connect(function()
         if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then dir -= Vector3.new(0,1,0) end
         hrp.SoraFly.Velocity = dir.Magnitude > 0 and dir.Unit * flySpeed or Vector3.zero
         hrp.SoraGyro.CFrame = cam.CFrame
+    end
+end)
+
+-- FIXED AUTO EVENT LOOP
+RunService.Stepped:Connect(function()
+    if noclip and player.Character then for _,v in pairs(player.Character:GetDescendants()) do if v:IsA("BasePart") then v.CanCollide = false end end end
+    
+    if autoXmas then
+        local t = os.date("!*t", workspace:GetServerTimeNow())
+        local hrp = HRP()
+        if hrp then
+            local isEvent = false
+            for _,h in pairs(EVENT_HOURS) do if t.hour == h then isEvent = true break end end
+            
+            -- TP KE EVENT
+            if isEvent and t.min == 0 and t.sec >= 30 and not teleported then
+                lastFishingPos = hrp.CFrame
+                hrp.CFrame = _G.SelectedEventSpot
+                teleported = true; returned = false
+                warn("SORA: Teleport ke Event!")
+            
+            -- BALIK DARI EVENT
+            elseif t.min == 29 and t.sec >= 30 and teleported and not returned then
+                hrp.CFrame = lastFishingPos or CFrame.new(1173.1, 23.4, 1565.1)
+                returned = true
+                warn("SORA: Event selesai, balik ke awal.")
+            end
+            
+            -- Reset status tiap jam bukan event
+            if not isEvent then teleported = false; returned = false end
+        end
     end
 end)
