@@ -29,7 +29,7 @@ openLogo.Visible = false
 openLogo.Active = true
 openLogo.Draggable = true 
 -- Mencoba Image ID hasil konversi manual
-openLogo.Image = "rbxassetid://121708890943260" 
+openLogo.Image = "rbxassetid://107169258644997" 
 
 local logoCorner = Instance.new("UICorner", openLogo)
 logoCorner.CornerRadius = UDim.new(1, 0)
@@ -272,3 +272,4 @@ RunService.Stepped:Connect(function()
         end
     end
 end)
+
