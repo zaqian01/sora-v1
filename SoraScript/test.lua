@@ -1,4 +1,4 @@
--- ================= SORA RECORDER V8 (GLIDE + 2S DELAY) =================
+-- ================= SORA RECORDER V9 (ANTI-GROUND GLIDE) =================
 local Players = game:GetService("Players")
 local HttpService = game:GetService("HttpService")
 local TweenService = game:GetService("TweenService")
@@ -34,7 +34,7 @@ end
 
 -- ================= UI SETUP =================
 local gui = Instance.new("ScreenGui", player.PlayerGui)
-gui.Name = "SoraV8_Final"
+gui.Name = "SoraV9_AntiGround"
 gui.ResetOnSpawn = false 
 
 local frame = Instance.new("Frame", gui)
@@ -47,7 +47,7 @@ Instance.new("UICorner", frame)
 
 local title = Instance.new("TextLabel", frame)
 title.Size = UDim2.new(1, 0, 0, 35)
-title.Text = "SORA RECORDER V8"
+title.Text = "SORA RECORDER V9"
 title.TextColor3 = Color3.fromRGB(0, 255, 180)
 title.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 title.Font = Enum.Font.GothamBold
@@ -56,7 +56,7 @@ Instance.new("UICorner", title)
 local status = Instance.new("TextLabel", frame)
 status.Size = UDim2.new(1, 0, 0, 25)
 status.Position = UDim2.new(0, 0, 0.93, 0)
-status.Text = "Status: Waiting..."
+status.Text = "Ready to Glide"
 status.TextColor3 = Color3.new(0.8, 0.8, 0.8)
 status.BackgroundTransparency = 1
 status.Font = Enum.Font.Gotham
@@ -84,7 +84,7 @@ speedBtn.MouseButton1Click:Connect(function()
     speedBtn.Text = "FLY SPEED: " .. flySpeed
 end)
 
--- AUTO GLIDE LOGIC WITH 2s DELAY
+-- AUTO GLIDE LOGIC
 glideBtn.MouseButton1Click:Connect(function()
     if #recordedPoints == 0 then status.Text = "No Points!"; return end
     autoGliding = not autoGliding
@@ -99,18 +99,23 @@ glideBtn.MouseButton1Click:Connect(function()
                 local hrp = char and char:FindFirstChild("HumanoidRootPart")
                 
                 if hrp then
-                    -- 1. Hitung Kecepatan & Mulai Gerak
-                    local distance = (hrp.Position - targetCF.Position).Magnitude
+                    -- POINT AWAL UNTUK PREVENT TANAH
+                    -- Kita naikkan Y sedikit agar karakter tidak nyangkut di dalam lantai
+                    local safeTarget = targetCF * CFrame.new(0, 2, 0) 
+                    
+                    local distance = (hrp.Position - safeTarget.Position).Magnitude
                     local duration = distance / flySpeed
                     
-                    status.Text = "Gliding to Pt " .. i .. "..."
-                    local tween = TweenService:Create(hrp, TweenInfo.new(duration, Enum.EasingStyle.Linear), {CFrame = targetCF})
+                    status.Text = "Moving to Pt " .. i
+                    local tween = TweenService:Create(hrp, TweenInfo.new(duration, Enum.EasingStyle.Linear), {CFrame = safeTarget})
                     tween:Play()
                     tween.Completed:Wait()
                     
-                    -- 2. Berhenti 2 Detik di Checkpoint
+                    -- TURUN SEDIKIT UNTUK MENYENTUH CHECKPOINT
+                    hrp.CFrame = targetCF 
+                    
                     if autoGliding then
-                        status.Text = "Waiting at Pt " .. i .. " (2s)..."
+                        status.Text = "Validating Pt " .. i .. " (2s)..."
                         task.wait(2) 
                     end
                 end
@@ -118,7 +123,7 @@ glideBtn.MouseButton1Click:Connect(function()
             autoGliding = false
             glideBtn.Text = "START AUTO GLIDE"
             glideBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 150)
-            status.Text = "Finished Glide!"
+            status.Text = "Finished!"
         end)
     end
 end)
