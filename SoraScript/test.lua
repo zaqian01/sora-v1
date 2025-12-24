@@ -1,4 +1,4 @@
--- ================= SORA RECORDER V6 (AUTO-GLIDE) =================
+-- ================= SORA RECORDER V7 (CUSTOM SPEED GLIDE) =================
 local Players = game:GetService("Players")
 local HttpService = game:GetService("HttpService")
 local TweenService = game:GetService("TweenService")
@@ -11,7 +11,7 @@ local fileName = "SORA_MAP_" .. placeId .. ".json"
 local recordedPoints = {}
 local flying = false
 local autoGliding = false
-local speeds = {50, 100, 200, 500}
+local speeds = {50, 100, 150, 200, 300, 500} -- Kecepatan sesuai permintaan
 local currentSpeedIdx = 1
 local flySpeed = speeds[currentSpeedIdx]
 
@@ -34,8 +34,8 @@ end
 
 -- ================= UI SETUP =================
 local gui = Instance.new("ScreenGui", player.PlayerGui)
-gui.Name = "SoraV6_AutoGlide"
-gui.ResetOnSpawn = false
+gui.Name = "SoraV7_SpeedCustom"
+gui.ResetOnSpawn = false -- Panel tidak hilang saat mati
 
 local frame = Instance.new("Frame", gui)
 frame.Size = UDim2.fromOffset(260, 380)
@@ -47,7 +47,7 @@ Instance.new("UICorner", frame)
 
 local title = Instance.new("TextLabel", frame)
 title.Size = UDim2.new(1, 0, 0, 35)
-title.Text = "SORA RECORDER V6"
+title.Text = "SORA RECORDER V7"
 title.TextColor3 = Color3.fromRGB(0, 255, 180)
 title.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 title.Font = Enum.Font.GothamBold
@@ -56,7 +56,7 @@ Instance.new("UICorner", title)
 local status = Instance.new("TextLabel", frame)
 status.Size = UDim2.new(1, 0, 0, 25)
 status.Position = UDim2.new(0, 0, 0.93, 0)
-status.Text = "Mode: Auto-Glide Ready"
+status.Text = "Mode: Custom Speed Ready"
 status.TextColor3 = Color3.new(0.8, 0.8, 0.8)
 status.BackgroundTransparency = 1
 status.Font = Enum.Font.Gotham
@@ -70,20 +70,21 @@ local function createBtn(text, pos, color)
 end
 
 local recBtn    = createBtn("RECORD POINT (0)", UDim2.new(0.5, 0, 0.12, 0), Color3.fromRGB(45, 45, 90))
-local speedBtn  = createBtn("GLIDE SPEED: 50", UDim2.new(0.5, 0, 0.25, 0), Color3.fromRGB(140, 100, 20))
+local speedBtn  = createBtn("FLY SPEED: 50", UDim2.new(0.5, 0, 0.25, 0), Color3.fromRGB(140, 100, 20))
 local glideBtn  = createBtn("START AUTO GLIDE", UDim2.new(0.5, 0, 0.42, 0), Color3.fromRGB(0, 150, 150))
 local manualFly = createBtn("MANUAL FLY: OFF", UDim2.new(0.5, 0, 0.55, 0), Color3.fromRGB(60, 60, 60))
 local saveBtn   = createBtn("SAVE TO FILE", UDim2.new(0.5, 0, 0.72, 0), Color3.fromRGB(50, 50, 50))
 local clearBtn  = createBtn("CLEAR DATA", UDim2.new(0.5, 0, 0.85, 0), Color3.fromRGB(120, 30, 30))
 
--- TOGGLE SPEED
+-- TOGGLE SPEED (50-100-150-200-300-500)
 speedBtn.MouseButton1Click:Connect(function()
-    currentSpeedIdx = (currentSpeedIdx % #speeds) + 1
+    currentSpeedIdx = currentSpeedIdx + 1
+    if currentSpeedIdx > #speeds then currentSpeedIdx = 1 end
     flySpeed = speeds[currentSpeedIdx]
-    speedBtn.Text = "GLIDE SPEED: " .. flySpeed
+    speedBtn.Text = "FLY SPEED: " .. flySpeed
 end)
 
--- AUTO GLIDE LOGIC (Terbang Otomatis ke Checkpoints)
+-- AUTO GLIDE LOGIC
 glideBtn.MouseButton1Click:Connect(function()
     if #recordedPoints == 0 then status.Text = "No Points!"; return end
     autoGliding = not autoGliding
@@ -98,9 +99,8 @@ glideBtn.MouseButton1Click:Connect(function()
                 local hrp = char and char:FindFirstChild("HumanoidRootPart")
                 
                 if hrp then
-                    status.Text = "Gliding to Point " .. i .. "/" .. #recordedPoints
+                    status.Text = "Gliding Point: " .. i .. "/" .. #recordedPoints .. " | Spd: " .. flySpeed
                     
-                    -- Hitung durasi berdasarkan jarak dan kecepatan agar konstan
                     local distance = (hrp.Position - targetCF.Position).Magnitude
                     local duration = distance / flySpeed
                     
@@ -117,7 +117,7 @@ glideBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- MANUAL FLY (Tetap disediakan untuk recording)
+-- MANUAL FLY LOGIC
 local bv, bg
 manualFly.MouseButton1Click:Connect(function()
     flying = not flying
@@ -130,7 +130,7 @@ manualFly.MouseButton1Click:Connect(function()
         local hum = char:WaitForChild("Humanoid")
         hum.PlatformStand = true
         bv = Instance.new("BodyVelocity", hrp); bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-        bg = Instance.new("BodyGyro", hrp); bg.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+        bg = Instance.new("BodyGyro", hrp); bg.MaxTorque = Vector3.new(math.huge, math.huge, math.huge); bg.D = 100
         
         task.spawn(function()
             while flying and char.Parent do
@@ -140,6 +140,8 @@ manualFly.MouseButton1Click:Connect(function()
                 if UserInputService:IsKeyDown(Enum.KeyCode.S) then dir = dir - camCF.LookVector end
                 if UserInputService:IsKeyDown(Enum.KeyCode.A) then dir = dir - camCF.RightVector end
                 if UserInputService:IsKeyDown(Enum.KeyCode.D) then dir = dir + camCF.RightVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.Space) then dir = dir + Vector3.new(0,1,0) end
+                if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then dir = dir - Vector3.new(0,1,0) end
                 bv.Velocity = dir * flySpeed
                 bg.CFrame = camCF
                 task.wait()
@@ -151,13 +153,13 @@ manualFly.MouseButton1Click:Connect(function()
     end
 end)
 
--- BUTTON HANDLERS LAIN
+-- RECORD & FILE HANDLERS
 recBtn.MouseButton1Click:Connect(function()
     local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
     if hrp then
         table.insert(recordedPoints, hrp.CFrame)
         recBtn.Text = "RECORD POINT (" .. #recordedPoints .. ")"
-        status.Text = "Point " .. #recordedPoints .. " Recorded"
+        status.Text = "Point " .. #recordedPoints .. " Saved"
     end
 end)
 
@@ -168,4 +170,4 @@ clearBtn.MouseButton1Click:Connect(function()
     status.Text = "Data Cleared!"
 end)
 
-if loadFromFile() then recBtn.Text = "RECORD POINT (" .. #recordedPoints .. ")" end
+if loadFromFile() then recBtn.Text = "RECORD POINT (" .. #recordedPoints .. ")"; status.Text = "Data Loaded" end
