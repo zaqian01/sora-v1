@@ -1,14 +1,17 @@
--- ================= SORA RECORDER V2 + FLY =================
+-- ================= SORA RECORDER V3 (AUTO-SAVE) + SPEED FLY =================
 local Players = game:GetService("Players")
 local HttpService = game:GetService("HttpService")
 local RunService = game:GetService("RunService")
+local UserInputService = game:GetService("UserInputService")
 local player = Players.LocalPlayer
 local placeId = game.PlaceId
 local fileName = "SORA_MAP_" .. placeId .. ".json"
 
 local recordedPoints = {}
 local flying = false
-local flySpeed = 50
+local speeds = {50, 100, 200, 500}
+local currentSpeedIdx = 1
+local flySpeed = speeds[currentSpeedIdx]
 
 -- FUNGSI SAVE KE FILE
 local function saveToFile()
@@ -35,10 +38,10 @@ end
 
 -- ================= UI & LOGIC =================
 local gui = Instance.new("ScreenGui", player.PlayerGui)
-gui.Name = "SoraRecorderV3_Fly"
+gui.Name = "SoraRecorderV3_FlySpeed"
 
 local frame = Instance.new("Frame", gui)
-frame.Size = UDim2.fromOffset(260, 330) -- Ukuran ditambah sedikit
+frame.Size = UDim2.fromOffset(260, 360) -- Frame dibesarkan lagi
 frame.Position = UDim2.fromScale(0.5, 0.5)
 frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
 frame.Active = true
@@ -47,7 +50,7 @@ Instance.new("UICorner", frame)
 
 local title = Instance.new("TextLabel", frame)
 title.Size = UDim2.new(1, 0, 0, 35)
-title.Text = "SORA RECORDER V2 + FLY"
+title.Text = "SORA RECORDER V3"
 title.TextColor3 = Color3.fromRGB(0, 255, 180)
 title.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 title.Font = Enum.Font.GothamBold
@@ -55,8 +58,8 @@ Instance.new("UICorner", title)
 
 local status = Instance.new("TextLabel", frame)
 status.Size = UDim2.new(1, 0, 0, 25)
-status.Position = UDim2.new(0, 0, 0.92, 0)
-status.Text = "Checking for save data..."
+status.Position = UDim2.new(0, 0, 0.93, 0)
+status.Text = "Status: Ready"
 status.TextColor3 = Color3.new(0.8, 0.8, 0.8)
 status.BackgroundTransparency = 1
 status.Font = Enum.Font.Gotham
@@ -69,31 +72,23 @@ local function createBtn(text, pos, color)
     return b
 end
 
-local recBtn   = createBtn("RECORD POINT (0)", UDim2.new(0.5, 0, 0.13, 0), Color3.fromRGB(45, 45, 90))
-local flyBtn   = createBtn("FLY: OFF", UDim2.new(0.5, 0, 0.26, 0), Color3.fromRGB(70, 70, 70))
-local rushBtn  = createBtn("START AUTO RUSH", UDim2.new(0.5, 0, 0.43, 0), Color3.fromRGB(45, 90, 45))
-local saveBtn  = createBtn("SAVE TO FILE", UDim2.new(0.5, 0, 0.60, 0), Color3.fromRGB(120, 80, 20))
-local clearBtn = createBtn("CLEAR DATA", UDim2.new(0.5, 0, 0.77, 0), Color3.fromRGB(100, 30, 30))
+local recBtn    = createBtn("RECORD POINT (0)", UDim2.new(0.5, 0, 0.12, 0), Color3.fromRGB(45, 45, 90))
+local flyBtn    = createBtn("FLY: OFF", UDim2.new(0.5, 0, 0.23, 0), Color3.fromRGB(70, 70, 70))
+local speedBtn  = createBtn("FLY SPEED: 50", UDim2.new(0.5, 0, 0.34, 0), Color3.fromRGB(150, 150, 50))
+local rushBtn   = createBtn("START AUTO RUSH", UDim2.new(0.5, 0, 0.49, 0), Color3.fromRGB(45, 90, 45))
+local saveBtn   = createBtn("SAVE TO FILE", UDim2.new(0.5, 0, 0.64, 0), Color3.fromRGB(120, 80, 20))
+local clearBtn  = createBtn("CLEAR DATA", UDim2.new(0.5, 0, 0.79, 0), Color3.fromRGB(100, 30, 30))
+
+-- TOGGLE SPEED
+speedBtn.MouseButton1Click:Connect(function()
+    currentSpeedIdx = currentSpeedIdx + 1
+    if currentSpeedIdx > #speeds then currentSpeedIdx = 1 end
+    flySpeed = speeds[currentSpeedIdx]
+    speedBtn.Text = "FLY SPEED: " .. flySpeed
+end)
 
 -- LOGIC FLY
 local bodyVelocity, bodyGyro
-runFly = RunService.RenderStepped:Connect(function()
-    if flying and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
-        local hrp = player.Character.HumanoidRootPart
-        local camera = workspace.CurrentCamera
-        local moveDir = Vector3.new(0,0,0)
-        
-        -- Basic fly movement logic
-        hrp.Velocity = Vector3.new(0,0.1,0) -- Anti-falling
-        
-        local lookVector = camera.CFrame.LookVector
-        local rightVector = camera.CFrame.RightVector
-        
-        -- Sederhana: Karakter akan bergerak ke arah kamera
-        hrp.CFrame = CFrame.new(hrp.Position, hrp.Position + lookVector)
-    end
-end)
-
 flyBtn.MouseButton1Click:Connect(function()
     flying = not flying
     flyBtn.Text = flying and "FLY: ON" or "FLY: OFF"
@@ -119,8 +114,7 @@ flyBtn.MouseButton1Click:Connect(function()
             while flying do
                 local camCF = workspace.CurrentCamera.CFrame
                 local dir = Vector3.new()
-                -- Control Check (Sederhana)
-                local UserInputService = game:GetService("UserInputService")
+                
                 if UserInputService:IsKeyDown(Enum.KeyCode.W) then dir = dir + camCF.LookVector end
                 if UserInputService:IsKeyDown(Enum.KeyCode.S) then dir = dir - camCF.LookVector end
                 if UserInputService:IsKeyDown(Enum.KeyCode.A) then dir = dir - camCF.RightVector end
@@ -140,7 +134,7 @@ flyBtn.MouseButton1Click:Connect(function()
     end
 end)
 
--- HANDLERS LAINNYA
+-- HANDLERS RECORDING
 recBtn.MouseButton1Click:Connect(function()
     local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
     if hrp then
@@ -157,9 +151,7 @@ rushBtn.MouseButton1Click:Connect(function()
     rushBtn.Text = rushing and "STOP RUSH" or "START AUTO RUSH"
     
     if rushing then
-        -- Matikan fly otomatis jika sedang rushing
-        if flying then flyBtn.MouseButton1Click:Fire() end 
-        
+        if flying then flyBtn.MouseButton1Click:Fire() end -- Tutup fly jika rush
         task.spawn(function()
             for i, cf in ipairs(recordedPoints) do
                 if not rushing then break end
@@ -188,12 +180,10 @@ clearBtn.MouseButton1Click:Connect(function()
     status.Text = "Data and File Deleted!"
 end)
 
--- AUTO LOAD ON STARTUP
+-- AUTO LOAD
 task.spawn(function()
     if loadFromFile() then
         recBtn.Text = "RECORD POINT (" .. #recordedPoints .. ")"
         status.Text = "Loaded data for Map: " .. placeId
-    else
-        status.Text = "No previous data for this map."
     end
 end)
