@@ -1,4 +1,4 @@
--- ================= SORA RECORDER V7 (CUSTOM SPEED GLIDE) =================
+-- ================= SORA RECORDER V8 (GLIDE + 2S DELAY) =================
 local Players = game:GetService("Players")
 local HttpService = game:GetService("HttpService")
 local TweenService = game:GetService("TweenService")
@@ -11,7 +11,7 @@ local fileName = "SORA_MAP_" .. placeId .. ".json"
 local recordedPoints = {}
 local flying = false
 local autoGliding = false
-local speeds = {50, 100, 150, 200, 300, 500} -- Kecepatan sesuai permintaan
+local speeds = {50, 100, 150, 200, 300, 500}
 local currentSpeedIdx = 1
 local flySpeed = speeds[currentSpeedIdx]
 
@@ -34,8 +34,8 @@ end
 
 -- ================= UI SETUP =================
 local gui = Instance.new("ScreenGui", player.PlayerGui)
-gui.Name = "SoraV7_SpeedCustom"
-gui.ResetOnSpawn = false -- Panel tidak hilang saat mati
+gui.Name = "SoraV8_Final"
+gui.ResetOnSpawn = false 
 
 local frame = Instance.new("Frame", gui)
 frame.Size = UDim2.fromOffset(260, 380)
@@ -47,7 +47,7 @@ Instance.new("UICorner", frame)
 
 local title = Instance.new("TextLabel", frame)
 title.Size = UDim2.new(1, 0, 0, 35)
-title.Text = "SORA RECORDER V7"
+title.Text = "SORA RECORDER V8"
 title.TextColor3 = Color3.fromRGB(0, 255, 180)
 title.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 title.Font = Enum.Font.GothamBold
@@ -56,7 +56,7 @@ Instance.new("UICorner", title)
 local status = Instance.new("TextLabel", frame)
 status.Size = UDim2.new(1, 0, 0, 25)
 status.Position = UDim2.new(0, 0, 0.93, 0)
-status.Text = "Mode: Custom Speed Ready"
+status.Text = "Status: Waiting..."
 status.TextColor3 = Color3.new(0.8, 0.8, 0.8)
 status.BackgroundTransparency = 1
 status.Font = Enum.Font.Gotham
@@ -76,7 +76,7 @@ local manualFly = createBtn("MANUAL FLY: OFF", UDim2.new(0.5, 0, 0.55, 0), Color
 local saveBtn   = createBtn("SAVE TO FILE", UDim2.new(0.5, 0, 0.72, 0), Color3.fromRGB(50, 50, 50))
 local clearBtn  = createBtn("CLEAR DATA", UDim2.new(0.5, 0, 0.85, 0), Color3.fromRGB(120, 30, 30))
 
--- TOGGLE SPEED (50-100-150-200-300-500)
+-- TOGGLE SPEED
 speedBtn.MouseButton1Click:Connect(function()
     currentSpeedIdx = currentSpeedIdx + 1
     if currentSpeedIdx > #speeds then currentSpeedIdx = 1 end
@@ -84,7 +84,7 @@ speedBtn.MouseButton1Click:Connect(function()
     speedBtn.Text = "FLY SPEED: " .. flySpeed
 end)
 
--- AUTO GLIDE LOGIC
+-- AUTO GLIDE LOGIC WITH 2s DELAY
 glideBtn.MouseButton1Click:Connect(function()
     if #recordedPoints == 0 then status.Text = "No Points!"; return end
     autoGliding = not autoGliding
@@ -99,14 +99,20 @@ glideBtn.MouseButton1Click:Connect(function()
                 local hrp = char and char:FindFirstChild("HumanoidRootPart")
                 
                 if hrp then
-                    status.Text = "Gliding Point: " .. i .. "/" .. #recordedPoints .. " | Spd: " .. flySpeed
-                    
+                    -- 1. Hitung Kecepatan & Mulai Gerak
                     local distance = (hrp.Position - targetCF.Position).Magnitude
                     local duration = distance / flySpeed
                     
+                    status.Text = "Gliding to Pt " .. i .. "..."
                     local tween = TweenService:Create(hrp, TweenInfo.new(duration, Enum.EasingStyle.Linear), {CFrame = targetCF})
                     tween:Play()
                     tween.Completed:Wait()
+                    
+                    -- 2. Berhenti 2 Detik di Checkpoint
+                    if autoGliding then
+                        status.Text = "Waiting at Pt " .. i .. " (2s)..."
+                        task.wait(2) 
+                    end
                 end
             end
             autoGliding = false
@@ -153,7 +159,7 @@ manualFly.MouseButton1Click:Connect(function()
     end
 end)
 
--- RECORD & FILE HANDLERS
+-- HANDLERS
 recBtn.MouseButton1Click:Connect(function()
     local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
     if hrp then
