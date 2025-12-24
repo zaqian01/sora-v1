@@ -1,255 +1,199 @@
--- SERVICES
+-- ================= SORA RECORDER V2 + FLY =================
 local Players = game:GetService("Players")
-local UIS = game:GetService("UserInputService")
-local RunService = game:GetService("RunService")
-local Stats = game:GetService("Stats")
 local HttpService = game:GetService("HttpService")
-local VirtualUser = game:GetService("VirtualUser")
-
+local RunService = game:GetService("RunService")
 local player = Players.LocalPlayer
+local placeId = game.PlaceId
+local fileName = "SORA_MAP_" .. placeId .. ".json"
 
--- ================= GUI ROOT =================
+local recordedPoints = {}
+local flying = false
+local flySpeed = 50
+
+-- FUNGSI SAVE KE FILE
+local function saveToFile()
+    local data = {}
+    for _, cf in ipairs(recordedPoints) do
+        table.insert(data, {cf:GetComponents()})
+    end
+    writefile(fileName, HttpService:JSONEncode(data))
+end
+
+-- FUNGSI LOAD DARI FILE
+local function loadFromFile()
+    if isfile(fileName) then
+        local content = readfile(fileName)
+        local data = HttpService:JSONDecode(content)
+        recordedPoints = {}
+        for _, components in ipairs(data) do
+            table.insert(recordedPoints, CFrame.new(unpack(components)))
+        end
+        return true
+    end
+    return false
+end
+
+-- ================= UI & LOGIC =================
 local gui = Instance.new("ScreenGui", player.PlayerGui)
-gui.Name = "SORA_V6_FIXED"
-gui.ResetOnSpawn = false
+gui.Name = "SoraRecorderV3_Fly"
 
--- MAIN FRAME
-local mainFrame = Instance.new("Frame", gui)
-mainFrame.Size = UDim2.fromOffset(550, 380)
-mainFrame.Position = UDim2.fromScale(0.5, 0.5)
-mainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
-mainFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
-mainFrame.Draggable = true
-mainFrame.Active = true
-Instance.new("UICorner", mainFrame).CornerRadius = UDim.new(0, 8)
+local frame = Instance.new("Frame", gui)
+frame.Size = UDim2.fromOffset(260, 330) -- Ukuran ditambah sedikit
+frame.Position = UDim2.fromScale(0.5, 0.5)
+frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+frame.Active = true
+frame.Draggable = true
+Instance.new("UICorner", frame)
 
--- SIDEBAR (LEFT)
-local sidebar = Instance.new("Frame", mainFrame)
-sidebar.Size = UDim2.new(0, 130, 1, 0)
-sidebar.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-Instance.new("UICorner", sidebar).CornerRadius = UDim.new(0, 8)
+local title = Instance.new("TextLabel", frame)
+title.Size = UDim2.new(1, 0, 0, 35)
+title.Text = "SORA RECORDER V2 + FLY"
+title.TextColor3 = Color3.fromRGB(0, 255, 180)
+title.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
+title.Font = Enum.Font.GothamBold
+Instance.new("UICorner", title)
 
-local sideLayout = Instance.new("UIListLayout", sidebar)
-sideLayout.Padding = UDim.new(0, 5)
-sideLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-Instance.new("UIPadding", sidebar).PaddingTop = UDim.new(0, 10)
+local status = Instance.new("TextLabel", frame)
+status.Size = UDim2.new(1, 0, 0, 25)
+status.Position = UDim2.new(0, 0, 0.92, 0)
+status.Text = "Checking for save data..."
+status.TextColor3 = Color3.new(0.8, 0.8, 0.8)
+status.BackgroundTransparency = 1
+status.Font = Enum.Font.Gotham
+status.TextSize = 10
 
--- CONTENT AREA
-local container = Instance.new("Frame", mainFrame)
-container.Size = UDim2.new(1, -140, 1, -60)
-container.Position = UDim2.fromOffset(135, 50)
-container.BackgroundTransparency = 1
-
--- HEADER (SORA + PING + COORD)
-local headerArea = Instance.new("Frame", mainFrame)
-headerArea.Size = UDim2.new(1, -140, 0, 40)
-headerArea.Position = UDim2.fromOffset(135, 5)
-headerArea.BackgroundTransparency = 1
-
-local headerTitle = Instance.new("TextLabel", headerArea)
-headerTitle.Size = UDim2.new(0, 100, 1, 0)
-headerTitle.Text = "SORA"
-headerTitle.TextColor3 = Color3.fromRGB(0, 255, 180)
-headerTitle.Font = Enum.Font.GothamBold
-headerTitle.TextSize = 20
-headerTitle.BackgroundTransparency = 1
-headerTitle.TextXAlignment = Enum.TextXAlignment.Left
-
-local infoLabel = Instance.new("TextLabel", headerArea)
-infoLabel.Size = UDim2.new(1, -110, 1, 0)
-infoLabel.Position = UDim2.fromOffset(110, 0)
-infoLabel.Text = "Ping: 0ms | X: 0 Y: 0 Z: 0"
-infoLabel.TextColor3 = Color3.fromRGB(200, 200, 200)
-infoLabel.Font = Enum.Font.Code
-infoLabel.TextSize = 11
-infoLabel.BackgroundTransparency = 1
-infoLabel.TextXAlignment = Enum.TextXAlignment.Left
-
--- ================= TAB SYSTEM =================
-local tabs = {}
-local function createTab(name)
-    local btn = Instance.new("TextButton", sidebar)
-    btn.Size = UDim2.new(0, 110, 0, 35)
-    btn.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-    btn.Text = name
-    btn.TextColor3 = Color3.new(0.8, 0.8, 0.8)
-    btn.Font = Enum.Font.Gotham
-    Instance.new("UICorner", btn)
-
-    local page = Instance.new("ScrollingFrame", container)
-    page.Size = UDim2.new(1, 0, 1, 0)
-    page.Visible = false
-    page.BackgroundTransparency = 1
-    page.ScrollBarThickness = 0
-    Instance.new("UIListLayout", page).Padding = UDim.new(0, 8)
-
-    btn.MouseButton1Click:Connect(function()
-        for _, p in pairs(tabs) do p.Visible = false end
-        page.Visible = true
-    end)
-    tabs[name] = page
-    return page
-end
-
-local function createToggle(parent, text, callback)
-    local btn = Instance.new("TextButton", parent)
-    btn.Size = UDim2.new(0, 380, 0, 35)
-    btn.BackgroundColor3 = Color3.fromRGB(25, 25, 25)
-    btn.Text = text .. ": OFF"
-    btn.TextColor3 = Color3.new(1, 1, 1)
-    btn.Font = Enum.Font.GothamBold
-    Instance.new("UICorner", btn)
-
-    local state = false
-    btn.MouseButton1Click:Connect(function()
-        state = not state
-        btn.Text = text .. (state and ": ON" or ": OFF")
-        btn.TextColor3 = state and Color3.fromRGB(0, 255, 180) or Color3.new(1, 1, 1)
-        callback(state)
-    end)
-    return btn
-end
-
--- ================= TABS =================
-local mainPage = createTab("Main")
-local tpPage = createTab("Teleport")
-local miscPage = createTab("Misc")
-tabs["Main"].Visible = true
-
--- ================= MAIN TAB =================
-local autoXmas = false
-local xmasBtn = createToggle(mainPage, "Auto Event", function(v) autoXmas = v end)
-
-local countdownLabel = Instance.new("TextLabel", mainPage)
-countdownLabel.Size = UDim2.new(0, 380, 0, 25); countdownLabel.BackgroundTransparency = 1; countdownLabel.TextColor3 = Color3.fromRGB(255, 200, 0); countdownLabel.Font = Enum.Font.GothamBold
-
-local spotContainer = Instance.new("Frame", mainPage)
-spotContainer.Size = UDim2.new(0, 380, 0, 150); spotContainer.BackgroundTransparency = 1; spotContainer.Visible = false
-Instance.new("UIListLayout", spotContainer).Padding = UDim.new(0, 5)
-
-local SPOTS = { ["Spot 1"] = CFrame.new(606.0, -580.6, 8923.3), ["Spot 2"] = CFrame.new(603.4, -580.6, 8886.0), ["Spot 3"] = CFrame.new(576.8, -580.7, 8845.8), ["Spot 4"] = CFrame.new(774.6, -487.2, 8923.0) }
-_G.SelectedEventSpot = SPOTS["Spot 1"]
-
-for name, cf in pairs(SPOTS) do
-    local b = Instance.new("TextButton", spotContainer)
-    b.Size = UDim2.new(1, 0, 0, 30); b.Text = "Select " .. name; b.BackgroundColor3 = Color3.fromRGB(35, 35, 35); b.TextColor3 = Color3.new(1,1,1); Instance.new("UICorner", b)
-    b.MouseButton1Click:Connect(function() _G.SelectedEventSpot = cf end)
-end
-
-xmasBtn.MouseButton1Click:Connect(function() spotContainer.Visible = autoXmas end)
-
--- ================= TELEPORT TAB =================
-local tpActive = false
-local tpBtn = createToggle(tpPage, "Teleport To Player", function(v) tpActive = v end)
-
-local playerList = Instance.new("ScrollingFrame", tpPage)
-playerList.Size = UDim2.new(0, 380, 0, 200); playerList.BackgroundTransparency = 1; playerList.Visible = false; playerList.ScrollBarThickness = 0
-Instance.new("UIListLayout", playerList).Padding = UDim.new(0, 5)
-
-local function updatePlayers()
-    for _, c in pairs(playerList:GetChildren()) do if c:IsA("TextButton") then c:Destroy() end end
-    for _, p in pairs(Players:GetPlayers()) do
-        if p ~= player then
-            local b = Instance.new("TextButton", playerList)
-            b.Size = UDim2.new(1, 0, 0, 30); b.Text = p.DisplayName; b.BackgroundColor3 = Color3.fromRGB(30,30,30); b.TextColor3 = Color3.new(1,1,1); Instance.new("UICorner", b)
-            b.MouseButton1Click:Connect(function() if p.Character then player.Character.HumanoidRootPart.CFrame = p.Character.HumanoidRootPart.CFrame * CFrame.new(0,0,3) end end)
-        end
-    end
-end
-
-tpBtn.MouseButton1Click:Connect(function() playerList.Visible = tpActive; if tpActive then updatePlayers() end end)
-
--- ================= MISC TAB =================
-local fly, noclip, flySpeed = false, false, 100
-createToggle(miscPage, "Fly", function(v) 
-    fly = v 
-    local hrp = player.Character.HumanoidRootPart
-    if fly then
-        local bv = Instance.new("BodyVelocity", hrp); bv.Name = "SoraFly"; bv.MaxForce = Vector3.new(1e6,1e6,1e6)
-        local bg = Instance.new("BodyGyro", hrp); bg.Name = "SoraGyro"; bg.MaxTorque = Vector3.new(1e6,1e6,1e6)
-        player.Character.Humanoid.PlatformStand = true
-    else
-        if hrp:FindFirstChild("SoraFly") then hrp.SoraFly:Destroy() end
-        if hrp:FindFirstChild("SoraGyro") then hrp.SoraGyro:Destroy() end
-        player.Character.Humanoid.PlatformStand = false
-    end
-end)
-
--- FLY SPEED SLIDER
-local sliderFrame = Instance.new("Frame", miscPage); sliderFrame.Size = UDim2.new(0, 380, 0, 45); sliderFrame.BackgroundTransparency = 1
-local sliderLabel = Instance.new("TextLabel", sliderFrame); sliderLabel.Size = UDim2.new(1,0,0,20); sliderLabel.Text = "Fly Speed: 100"; sliderLabel.TextColor3 = Color3.new(1,1,1); sliderLabel.BackgroundTransparency = 1; sliderLabel.Font = Enum.Font.Gotham
-local sliderBar = Instance.new("TextButton", sliderFrame); sliderBar.Size = UDim2.new(0, 360, 0, 6); sliderBar.Position = UDim2.fromOffset(10, 25); sliderBar.BackgroundColor3 = Color3.fromRGB(50,50,50); sliderBar.Text = ""
-local sliderFill = Instance.new("Frame", sliderBar); sliderFill.Size = UDim2.fromScale(0.2, 1); sliderFill.BackgroundColor3 = Color3.fromRGB(0, 255, 180); sliderFill.BorderSizePixel = 0
-
-sliderBar.MouseButton1Down:Connect(function()
-    local moveCon
-    moveCon = UIS.InputChanged:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch then
-            local rel = math.clamp((input.Position.X - sliderBar.AbsolutePosition.X) / sliderBar.AbsoluteSize.X, 0, 1)
-            flySpeed = math.floor(100 + (rel * 400))
-            sliderFill.Size = UDim2.fromScale(rel, 1)
-            sliderLabel.Text = "Fly Speed: " .. flySpeed
-        end
-    end)
-    UIS.InputEnded:Connect(function(input) if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then moveCon:Disconnect() end end)
-end)
-
-createToggle(miscPage, "Noclip", function(v) noclip = v end)
-
-local uiH = false
-createActionBtn = function(p, t, c) -- Helper action btn
-    local b = Instance.new("TextButton", p); b.Size = UDim2.new(0, 380, 0, 35); b.BackgroundColor3 = Color3.fromRGB(25,25,25); b.Text = t; b.TextColor3 = Color3.new(1,1,1); b.Font = Enum.Font.GothamBold; Instance.new("UICorner", b)
-    b.MouseButton1Click:Connect(c)
+-- BUTTON CREATOR UTILS
+local function createBtn(text, pos, color)
+    local b = Instance.new("TextButton", frame)
+    b.Size = UDim2.new(0, 220, 0, 32); b.Position = pos; b.AnchorPoint = Vector2.new(0.5, 0); b.Text = text; b.BackgroundColor3 = color; b.TextColor3 = Color3.new(1, 1, 1); b.Font = Enum.Font.GothamBold; Instance.new("UICorner", b)
     return b
 end
 
-createActionBtn(miscPage, "Hide Game UI", function()
-    uiH = not uiH
-    for _, v in pairs(player.PlayerGui:GetChildren()) do
-        if v:IsA("ScreenGui") and v.Name ~= gui.Name then v.Enabled = not uiH end
+local recBtn   = createBtn("RECORD POINT (0)", UDim2.new(0.5, 0, 0.13, 0), Color3.fromRGB(45, 45, 90))
+local flyBtn   = createBtn("FLY: OFF", UDim2.new(0.5, 0, 0.26, 0), Color3.fromRGB(70, 70, 70))
+local rushBtn  = createBtn("START AUTO RUSH", UDim2.new(0.5, 0, 0.43, 0), Color3.fromRGB(45, 90, 45))
+local saveBtn  = createBtn("SAVE TO FILE", UDim2.new(0.5, 0, 0.60, 0), Color3.fromRGB(120, 80, 20))
+local clearBtn = createBtn("CLEAR DATA", UDim2.new(0.5, 0, 0.77, 0), Color3.fromRGB(100, 30, 30))
+
+-- LOGIC FLY
+local bodyVelocity, bodyGyro
+runFly = RunService.RenderStepped:Connect(function()
+    if flying and player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+        local hrp = player.Character.HumanoidRootPart
+        local camera = workspace.CurrentCamera
+        local moveDir = Vector3.new(0,0,0)
+        
+        -- Basic fly movement logic
+        hrp.Velocity = Vector3.new(0,0.1,0) -- Anti-falling
+        
+        local lookVector = camera.CFrame.LookVector
+        local rightVector = camera.CFrame.RightVector
+        
+        -- Sederhana: Karakter akan bergerak ke arah kamera
+        hrp.CFrame = CFrame.new(hrp.Position, hrp.Position + lookVector)
     end
 end)
 
--- ================= LOOPS =================
-local EVENT_HOURS = {0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22}
-local teleported = false
+flyBtn.MouseButton1Click:Connect(function()
+    flying = not flying
+    flyBtn.Text = flying and "FLY: ON" or "FLY: OFF"
+    flyBtn.BackgroundColor3 = flying and Color3.fromRGB(0, 150, 255) or Color3.fromRGB(70, 70, 70)
+    
+    local char = player.Character
+    if not char then return end
+    local hrp = char:FindFirstChild("HumanoidRootPart")
+    local hum = char:FindFirstChildOfClass("Humanoid")
+    
+    if flying then
+        hum.PlatformStand = true
+        bodyVelocity = Instance.new("BodyVelocity", hrp)
+        bodyVelocity.Velocity = Vector3.new(0,0,0)
+        bodyVelocity.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
+        
+        bodyGyro = Instance.new("BodyGyro", hrp)
+        bodyGyro.MaxTorque = Vector3.new(math.huge, math.huge, math.huge)
+        bodyGyro.D = 100
+        bodyGyro.P = 10000
+        
+        task.spawn(function()
+            while flying do
+                local camCF = workspace.CurrentCamera.CFrame
+                local dir = Vector3.new()
+                -- Control Check (Sederhana)
+                local UserInputService = game:GetService("UserInputService")
+                if UserInputService:IsKeyDown(Enum.KeyCode.W) then dir = dir + camCF.LookVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.S) then dir = dir - camCF.LookVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.A) then dir = dir - camCF.RightVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.D) then dir = dir + camCF.RightVector end
+                if UserInputService:IsKeyDown(Enum.KeyCode.Space) then dir = dir + Vector3.new(0,1,0) end
+                if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then dir = dir - Vector3.new(0,1,0) end
+                
+                bodyVelocity.Velocity = dir * flySpeed
+                bodyGyro.CFrame = camCF
+                task.wait()
+            end
+        end)
+    else
+        hum.PlatformStand = false
+        if bodyVelocity then bodyVelocity:Destroy() end
+        if bodyGyro then bodyGyro:Destroy() end
+    end
+end)
 
-RunService.RenderStepped:Connect(function()
+-- HANDLERS LAINNYA
+recBtn.MouseButton1Click:Connect(function()
     local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
     if hrp then
-        local pos = hrp.Position
-        infoLabel.Text = string.format("Ping: %dms | X:%.0f Y:%.0f Z:%.0f", Stats.Network.ServerStatsItem["Data Ping"]:GetValue(), pos.X, pos.Y, pos.Z)
-    end
-    
-    local t = os.date("!*t", workspace:GetServerTimeNow())
-    local nextH = 24
-    for _, h in pairs(EVENT_HOURS) do if h > t.hour then nextH = h; break end end
-    local diff = os.time({year=t.year, month=t.month, day=t.day, hour=nextH, min=0, sec=0}) - workspace:GetServerTimeNow()
-    countdownLabel.Text = string.format("Next Event: %02d:%02d:%02d", math.floor(diff/3600), math.floor((diff%3600)/60), math.floor(diff%60))
-
-    if fly and hrp and hrp:FindFirstChild("SoraFly") then
-        local cam = workspace.CurrentCamera; local dir = Vector3.zero
-        if UIS:IsKeyDown(Enum.KeyCode.W) then dir += cam.CFrame.LookVector end
-        if UIS:IsKeyDown(Enum.KeyCode.S) then dir -= cam.CFrame.LookVector end
-        if UIS:IsKeyDown(Enum.KeyCode.A) then dir -= cam.CFrame.RightVector end
-        if UIS:IsKeyDown(Enum.KeyCode.D) then dir += cam.CFrame.RightVector end
-        if UIS:IsKeyDown(Enum.KeyCode.Space) then dir += Vector3.new(0,1,0) end
-        if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then dir -= Vector3.new(0,1,0) end
-        hrp.SoraFly.Velocity = dir * flySpeed
-        hrp.SoraGyro.CFrame = cam.CFrame
+        table.insert(recordedPoints, hrp.CFrame)
+        recBtn.Text = "RECORD POINT (" .. #recordedPoints .. ")"
+        status.Text = "Point recorded!"
     end
 end)
 
-RunService.Stepped:Connect(function()
-    if noclip and player.Character then for _, v in pairs(player.Character:GetDescendants()) do if v:IsA("BasePart") then v.CanCollide = false end end end
-    if autoXmas and player.Character:FindFirstChild("HumanoidRootPart") then
-        local hrp = player.Character.HumanoidRootPart
-        local t = os.date("!*t", workspace:GetServerTimeNow())
-        local isE = false; for _, h in pairs(EVENT_HOURS) do if t.hour == h then isE = true break end end
-        if isE and t.min == 0 and t.sec >= 30 and not teleported then
-            _G.LPos = hrp.CFrame; hrp.CFrame = _G.SelectedEventSpot; teleported = true
-        elseif t.min == 29 and t.sec >= 30 and teleported then
-            hrp.CFrame = _G.LPos or hrp.CFrame; teleported = false
-        end
+local rushing = false
+rushBtn.MouseButton1Click:Connect(function()
+    if #recordedPoints == 0 then status.Text = "No points recorded!"; return end
+    rushing = not rushing
+    rushBtn.Text = rushing and "STOP RUSH" or "START AUTO RUSH"
+    
+    if rushing then
+        -- Matikan fly otomatis jika sedang rushing
+        if flying then flyBtn.MouseButton1Click:Fire() end 
+        
+        task.spawn(function()
+            for i, cf in ipairs(recordedPoints) do
+                if not rushing then break end
+                if player.Character and player.Character:FindFirstChild("HumanoidRootPart") then
+                    player.Character.HumanoidRootPart.CFrame = cf
+                    status.Text = "Teleporting to Point " .. i
+                    task.wait(1.5)
+                end
+            end
+            rushing = false
+            rushBtn.Text = "START AUTO RUSH"
+            status.Text = "Rush Finished!"
+        end)
+    end
+end)
+
+saveBtn.MouseButton1Click:Connect(function()
+    saveToFile()
+    status.Text = "Saved to: " .. fileName
+end)
+
+clearBtn.MouseButton1Click:Connect(function()
+    recordedPoints = {}
+    recBtn.Text = "RECORD POINT (0)"
+    if isfile(fileName) then delfile(fileName) end
+    status.Text = "Data and File Deleted!"
+end)
+
+-- AUTO LOAD ON STARTUP
+task.spawn(function()
+    if loadFromFile() then
+        recBtn.Text = "RECORD POINT (" .. #recordedPoints .. ")"
+        status.Text = "Loaded data for Map: " .. placeId
+    else
+        status.Text = "No previous data for this map."
     end
 end)
