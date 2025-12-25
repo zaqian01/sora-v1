@@ -1,184 +1,123 @@
--- ================= SORA RECORDER V9 (ANTI-GROUND GLIDE) =================
-local Players = game:GetService("Players")
+-- ================= SORA TEAM MONITOR (FIXED AVATAR) =================
 local HttpService = game:GetService("HttpService")
-local TweenService = game:GetService("TweenService")
-local UserInputService = game:GetService("UserInputService")
+local Players = game:GetService("Players")
 
-local player = Players.LocalPlayer
-local placeId = game.PlaceId
-local fileName = "SORA_MAP_" .. placeId .. ".json"
+local webhookURL = "https://discord.com/api/webhooks/1441417921552191488/OLnhBfgM4fh1sG97NpipcG66OyNwrqJmARcKVgrxPQxC1u70iH4pnF-VVS5XxRTTh9va"
 
-local recordedPoints = {}
-local flying = false
-local autoGliding = false
-local speeds = {50, 100, 150, 200, 300, 500}
-local currentSpeedIdx = 1
-local flySpeed = speeds[currentSpeedIdx]
+local targetData = {
+    ["el_sora67"] = "1288092342213148728",
+    ["Unf0rgettable_5"] = "1378790404237037680",
+    ["KINGGPALLLZ"] = "1409506714939687022",
+    ["RNGvoided"] = "" 
+}
 
--- FUNGSI SAVE/LOAD
-local function saveToFile()
-    local data = {}
-    for _, cf in ipairs(recordedPoints) do table.insert(data, {cf:GetComponents()}) end
-    writefile(fileName, HttpService:JSONEncode(data))
+local isClosing = false
+
+-- Fungsi Ambil UserID yang lebih aman
+local function getUserId(name)
+    local ok, id = pcall(function() return Players:GetUserIdFromNameAsync(name) end)
+    return ok and id or 0
 end
 
-local function loadFromFile()
-    if isfile(fileName) then
-        local data = HttpService:JSONDecode(readfile(fileName))
-        recordedPoints = {}
-        for _, comp in ipairs(data) do table.insert(recordedPoints, CFrame.new(unpack(comp))) end
-        return true
+local function sendToDiscord(title, message, playerName, color)
+    if isClosing then return end
+    
+    local discordId = targetData[playerName]
+    local avatarUrl = ""
+    
+    -- Memastikan Avatar URL terbuat dengan benar menggunakan ID Angka
+    if playerName then
+        local userId = getUserId(playerName)
+        if userId ~= 0 then
+            avatarUrl = "https://www.roblox.com/headshot-thumbnail/image?userId=" .. userId .. "&width=420&height=420&format=png"
+        end
     end
-    return false
+    
+    local data = {
+        ["content"] = (discordId and discordId ~= "") and "<@" .. discordId .. ">" or "", 
+        ["embeds"] = {{
+            ["title"] = title,
+            ["description"] = message,
+            ["color"] = color or 65460,
+            -- Menggunakan Thumbnail agar muncul di samping teks (mirip Seraphin)
+            ["thumbnail"] = (avatarUrl ~= "") and { ["url"] = avatarUrl } or nil,
+            ["footer"] = { ["text"] = "SORA MONITORING SYSTEM" },
+            ["timestamp"] = os.date("!%Y-%m-%dT%H:%M:%SZ")
+        }}
+    }
+    
+    local request = http_request or request or (http and http.request) or syn.request
+    if request then
+        request({
+            Url = webhookURL,
+            Method = "POST",
+            Headers = {["Content-Type"] = "application/json"},
+            Body = HttpService:JSONEncode(data)
+        })
+    end
 end
 
--- ================= UI SETUP =================
-local gui = Instance.new("ScreenGui", player.PlayerGui)
-gui.Name = "SoraV9_AntiGround"
-gui.ResetOnSpawn = false 
+-- 1. HOST SIGNAL
+sendToDiscord("HOST ACTIVATE", "PENGELOLAAN WEBHOOK TELAH TERSAMBUNG. HOST: @" .. Players.LocalPlayer.Name:upper(), Players.LocalPlayer.Name, 65460)
 
-local frame = Instance.new("Frame", gui)
-frame.Size = UDim2.fromOffset(260, 380)
-frame.Position = UDim2.fromScale(0.5, 0.5)
-frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
-frame.Active = true
-frame.Draggable = true
-Instance.new("UICorner", frame)
-
-local title = Instance.new("TextLabel", frame)
-title.Size = UDim2.new(1, 0, 0, 35)
-title.Text = "SORA RECORDER V9"
-title.TextColor3 = Color3.fromRGB(0, 255, 180)
-title.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
-title.Font = Enum.Font.GothamBold
-Instance.new("UICorner", title)
-
-local status = Instance.new("TextLabel", frame)
-status.Size = UDim2.new(1, 0, 0, 25)
-status.Position = UDim2.new(0, 0, 0.93, 0)
-status.Text = "Ready to Glide"
-status.TextColor3 = Color3.new(0.8, 0.8, 0.8)
-status.BackgroundTransparency = 1
-status.Font = Enum.Font.Gotham
-status.TextSize = 10
-
--- BUTTON UTILS
-local function createBtn(text, pos, color)
-    local b = Instance.new("TextButton", frame)
-    b.Size = UDim2.new(0, 220, 0, 35); b.Position = pos; b.AnchorPoint = Vector2.new(0.5, 0); b.Text = text; b.BackgroundColor3 = color; b.TextColor3 = Color3.new(1, 1, 1); b.Font = Enum.Font.GothamBold; b.TextSize = 12; Instance.new("UICorner", b)
-    return b
-end
-
-local recBtn    = createBtn("RECORD POINT (0)", UDim2.new(0.5, 0, 0.12, 0), Color3.fromRGB(45, 45, 90))
-local speedBtn  = createBtn("FLY SPEED: 50", UDim2.new(0.5, 0, 0.25, 0), Color3.fromRGB(140, 100, 20))
-local glideBtn  = createBtn("START AUTO GLIDE", UDim2.new(0.5, 0, 0.42, 0), Color3.fromRGB(0, 150, 150))
-local manualFly = createBtn("MANUAL FLY: OFF", UDim2.new(0.5, 0, 0.55, 0), Color3.fromRGB(60, 60, 60))
-local saveBtn   = createBtn("SAVE TO FILE", UDim2.new(0.5, 0, 0.72, 0), Color3.fromRGB(50, 50, 50))
-local clearBtn  = createBtn("CLEAR DATA", UDim2.new(0.5, 0, 0.85, 0), Color3.fromRGB(120, 30, 30))
-
--- TOGGLE SPEED
-speedBtn.MouseButton1Click:Connect(function()
-    currentSpeedIdx = currentSpeedIdx + 1
-    if currentSpeedIdx > #speeds then currentSpeedIdx = 1 end
-    flySpeed = speeds[currentSpeedIdx]
-    speedBtn.Text = "FLY SPEED: " .. flySpeed
+game:BindToClose(function()
+    isClosing = true 
+    local data = {
+        ["embeds"] = {{
+            ["title"] = "HOST DISCONNECT",
+            ["description"] = "SISTEM PENGELOLAAN WEBHOOK TERPUTUS. HOST @" .. Players.LocalPlayer.Name:upper() .. " TELAH KELUAR.",
+            ["color"] = 16724814,
+            ["timestamp"] = os.date("!%Y-%m-%dT%H:%M:%SZ")
+        }}
+    }
+    local request = http_request or request or (http and http.request) or syn.request
+    if request then
+        request({ Url = webhookURL, Method = "POST", Headers = {["Content-Type"] = "application/json"}, Body = HttpService:JSONEncode(data) })
+    end
 end)
 
--- AUTO GLIDE LOGIC
-glideBtn.MouseButton1Click:Connect(function()
-    if #recordedPoints == 0 then status.Text = "No Points!"; return end
-    autoGliding = not autoGliding
-    glideBtn.Text = autoGliding and "STOP GLIDE" or "START AUTO GLIDE"
-    glideBtn.BackgroundColor3 = autoGliding and Color3.fromRGB(150, 0, 0) or Color3.fromRGB(0, 150, 150)
-    
-    if autoGliding then
-        task.spawn(function()
-            for i, targetCF in ipairs(recordedPoints) do
-                if not autoGliding then break end
-                local char = player.Character
-                local hrp = char and char:FindFirstChild("HumanoidRootPart")
-                
-                if hrp then
-                    -- POINT AWAL UNTUK PREVENT TANAH
-                    -- Kita naikkan Y sedikit agar karakter tidak nyangkut di dalam lantai
-                    local safeTarget = targetCF * CFrame.new(0, 2, 0) 
-                    
-                    local distance = (hrp.Position - safeTarget.Position).Magnitude
-                    local duration = distance / flySpeed
-                    
-                    status.Text = "Moving to Pt " .. i
-                    local tween = TweenService:Create(hrp, TweenInfo.new(duration, Enum.EasingStyle.Linear), {CFrame = safeTarget})
-                    tween:Play()
-                    tween.Completed:Wait()
-                    
-                    -- TURUN SEDIKIT UNTUK MENYENTUH CHECKPOINT
-                    hrp.CFrame = targetCF 
-                    
-                    if autoGliding then
-                        status.Text = "Validating Pt " .. i .. " (2s)..."
-                        task.wait(2) 
+-- 2. MONITOR JOIN & LEAVE
+Players.PlayerAdded:Connect(function(plr)
+    if targetData[plr.Name] then
+        sendToDiscord("PLAYER JOINED", "AKUN @" .. plr.Name:upper() .. " TELAH JOIN KE SERVER", plr.Name, 65460)
+    end
+end)
+
+Players.PlayerRemoving:Connect(function(plr)
+    if isClosing or plr == Players.LocalPlayer then return end
+    if targetData[plr.Name] then
+        sendToDiscord("PLAYER LEFT", "AKUN @" .. plr.Name:upper() .. " KELUAR DARI SERVER", plr.Name, 16724814)
+    end
+end)
+
+-- 3. MONITOR AFK BERTINGKAT
+local afkTimer = {}
+local lastCaught = {}
+
+task.spawn(function()
+    while task.wait(60) do
+        if isClosing then break end
+        for _, p in pairs(Players:GetPlayers()) do
+            if targetData[p.Name] then
+                local s = p:FindFirstChild("leaderstats")
+                if s and s:FindFirstChild("Caught") then
+                    local current = s.Caught.Value
+                    if lastCaught[p.UserId] and lastCaught[p.UserId] == current then
+                        afkTimer[p.UserId] = (afkTimer[p.UserId] or 0) + 1
+                        local t = afkTimer[p.UserId]
+                        if t == 1 then
+                            sendToDiscord("AFK WARNING", "AKUN @" .. p.Name:upper() .. " TIDAK MENARIK PANCINGAN SELAMA 1 MENIT", p.Name, 16776960)
+                        elseif t == 10 then
+                            sendToDiscord("AFK WARNING", "AKUN @" .. p.Name:upper() .. " TIDAK MENARIK PANCINGAN SELAMA 10 MENIT", p.Name, 16753920)
+                        elseif t == 60 then
+                            sendToDiscord("AFK WARNING", "AKUN @" .. p.Name:upper() .. " TIDAK MENARIK PANCINGAN SELAMA 1 JAM", p.Name, 16711680)
+                        end
+                    else
+                        afkTimer[p.UserId] = 0
                     end
+                    lastCaught[p.UserId] = current
                 end
             end
-            autoGliding = false
-            glideBtn.Text = "START AUTO GLIDE"
-            glideBtn.BackgroundColor3 = Color3.fromRGB(0, 150, 150)
-            status.Text = "Finished!"
-        end)
+        end
     end
 end)
-
--- MANUAL FLY LOGIC
-local bv, bg
-manualFly.MouseButton1Click:Connect(function()
-    flying = not flying
-    manualFly.Text = flying and "MANUAL FLY: ON" or "MANUAL FLY: OFF"
-    manualFly.BackgroundColor3 = flying and Color3.fromRGB(0, 150, 255) or Color3.fromRGB(60, 60, 60)
-    
-    if flying then
-        local char = player.Character or player.CharacterAdded:Wait()
-        local hrp = char:WaitForChild("HumanoidRootPart")
-        local hum = char:WaitForChild("Humanoid")
-        hum.PlatformStand = true
-        bv = Instance.new("BodyVelocity", hrp); bv.MaxForce = Vector3.new(math.huge, math.huge, math.huge)
-        bg = Instance.new("BodyGyro", hrp); bg.MaxTorque = Vector3.new(math.huge, math.huge, math.huge); bg.D = 100
-        
-        task.spawn(function()
-            while flying and char.Parent do
-                local camCF = workspace.CurrentCamera.CFrame
-                local dir = Vector3.new()
-                if UserInputService:IsKeyDown(Enum.KeyCode.W) then dir = dir + camCF.LookVector end
-                if UserInputService:IsKeyDown(Enum.KeyCode.S) then dir = dir - camCF.LookVector end
-                if UserInputService:IsKeyDown(Enum.KeyCode.A) then dir = dir - camCF.RightVector end
-                if UserInputService:IsKeyDown(Enum.KeyCode.D) then dir = dir + camCF.RightVector end
-                if UserInputService:IsKeyDown(Enum.KeyCode.Space) then dir = dir + Vector3.new(0,1,0) end
-                if UserInputService:IsKeyDown(Enum.KeyCode.LeftControl) then dir = dir - Vector3.new(0,1,0) end
-                bv.Velocity = dir * flySpeed
-                bg.CFrame = camCF
-                task.wait()
-            end
-            if hum then hum.PlatformStand = false end
-            if bv then bv:Destroy() end
-            if bg then bg:Destroy() end
-        end)
-    end
-end)
-
--- HANDLERS
-recBtn.MouseButton1Click:Connect(function()
-    local hrp = player.Character and player.Character:FindFirstChild("HumanoidRootPart")
-    if hrp then
-        table.insert(recordedPoints, hrp.CFrame)
-        recBtn.Text = "RECORD POINT (" .. #recordedPoints .. ")"
-        status.Text = "Point " .. #recordedPoints .. " Saved"
-    end
-end)
-
-saveBtn.MouseButton1Click:Connect(function() saveToFile(); status.Text = "File Saved!" end)
-clearBtn.MouseButton1Click:Connect(function()
-    recordedPoints = {}
-    recBtn.Text = "RECORD POINT (0)"
-    status.Text = "Data Cleared!"
-end)
-
-if loadFromFile() then recBtn.Text = "RECORD POINT (" .. #recordedPoints .. ")"; status.Text = "Data Loaded" end
