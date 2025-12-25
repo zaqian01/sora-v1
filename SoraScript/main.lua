@@ -7,6 +7,11 @@ local VirtualUser = game:GetService("VirtualUser")
 
 local player = Players.LocalPlayer
 
+-- ================= UTILS =================
+local function formatFullNumber(n)
+    return tostring(n):reverse():gsub("%d%d%d", "%1,"):reverse():gsub("^,", "")
+end
+
 -- ================= ANTI AFK =================
 player.Idled:Connect(function()
     VirtualUser:Button2Down(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
@@ -16,24 +21,76 @@ end)
 
 -- ================= GUI ROOT =================
 local gui = Instance.new("ScreenGui", player.PlayerGui)
-gui.Name = "SORA_HUB_V5"
+gui.Name = "SORA_HUB_V5_LIVE"
 gui.ResetOnSpawn = false
 
--- ================= FLOATING LOGO (NEW STYLE) =================
+-- ================= LIVE STATS PANEL (INDEPENDENT) =================
+local initialCaught = 0
+local statsData = player:FindFirstChild("leaderstats")
+if statsData and statsData:FindFirstChild("Caught") then
+    initialCaught = statsData.Caught.Value
+end
+
+local liveStatsFrame = Instance.new("Frame", gui)
+liveStatsFrame.Name = "LiveStatsFrame"
+liveStatsFrame.Size = UDim2.fromOffset(200, 260)
+liveStatsFrame.Position = UDim2.new(1, -210, 0.5, -130)
+liveStatsFrame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+liveStatsFrame.Visible = false -- Diatur lewat tombol
+liveStatsFrame.Active = true
+liveStatsFrame.Draggable = true
+Instance.new("UICorner", liveStatsFrame).CornerRadius = UDim.new(0, 8)
+local liveStroke = Instance.new("UIStroke", liveStatsFrame)
+liveStroke.Color = Color3.fromRGB(0, 255, 180)
+liveStroke.Thickness = 1.5
+
+-- Judul Stats
+local liveTitle = Instance.new("TextLabel", liveStatsFrame)
+liveTitle.Size = UDim2.new(1, 0, 0, 30)
+liveTitle.Text = "LIVE STATISTICS"
+liveTitle.TextColor3 = Color3.fromRGB(0, 255, 180)
+liveTitle.Font = Enum.Font.GothamBold
+liveTitle.TextSize = 12
+liveTitle.BackgroundTransparency = 1
+
+-- MY STATS SECTION
+local myStatsTitle = Instance.new("TextLabel", liveStatsFrame)
+myStatsTitle.Size = UDim2.new(1, 0, 0, 20); myStatsTitle.Position = UDim2.fromOffset(0, 30)
+myStatsTitle.Text = "— MY STATS —"; myStatsTitle.TextColor3 = Color3.new(0.7,0.7,0.7)
+myStatsTitle.Font = Enum.Font.GothamBold; myStatsTitle.TextSize = 10; myStatsTitle.BackgroundTransparency = 1
+
+local myExactVal = Instance.new("TextLabel", liveStatsFrame)
+myExactVal.Size = UDim2.new(1, 0, 0, 20); myExactVal.Position = UDim2.fromOffset(0, 50)
+myExactVal.Text = "Caught: 0"; myExactVal.TextColor3 = Color3.new(1,1,1)
+myExactVal.Font = Enum.Font.Code; myExactVal.TextSize = 11; myExactVal.BackgroundTransparency = 1
+
+local mySessionVal = Instance.new("TextLabel", liveStatsFrame)
+mySessionVal.Size = UDim2.new(1, 0, 0, 20); mySessionVal.Position = UDim2.fromOffset(0, 65)
+mySessionVal.Text = "Session: +0"; mySessionVal.TextColor3 = Color3.fromRGB(255, 200, 0)
+mySessionVal.Font = Enum.Font.Code; mySessionVal.TextSize = 10; mySessionVal.BackgroundTransparency = 1
+
+-- SERVER STATS SECTION
+local serverTitle = Instance.new("TextLabel", liveStatsFrame)
+serverTitle.Size = UDim2.new(1, 0, 0, 20); serverTitle.Position = UDim2.fromOffset(0, 90)
+serverTitle.Text = "— SERVER TOP 5 —"; serverTitle.TextColor3 = Color3.new(0.7,0.7,0.7)
+serverTitle.Font = Enum.Font.GothamBold; serverTitle.TextSize = 10; serverTitle.BackgroundTransparency = 1
+
+local serverList = Instance.new("ScrollingFrame", liveStatsFrame)
+serverList.Size = UDim2.new(1, -10, 0, 140); serverList.Position = UDim2.fromOffset(5, 110)
+serverList.BackgroundTransparency = 1; serverList.ScrollBarThickness = 0
+local serverLayout = Instance.new("UIListLayout", serverList); serverLayout.Padding = UDim.new(0, 2)
+
+-- ================= FLOATING LOGO =================
 local openLogo = Instance.new("ImageButton", gui)
 openLogo.Name = "SoraLogo"
 openLogo.Size = UDim2.fromOffset(60, 60)
 openLogo.Position = UDim2.fromScale(0.02, 0.5)
-openLogo.BackgroundTransparency = 1 -- Menghilangkan background hitam
+openLogo.BackgroundTransparency = 1
 openLogo.Visible = false 
 openLogo.Active = true
 openLogo.Draggable = true 
 openLogo.Image = "rbxassetid://107169258644997" 
-
-local logoCorner = Instance.new("UICorner", openLogo)
-logoCorner.CornerRadius = UDim.new(0, 12) -- Kotak dengan lengkungan halus (bukan lingkaran)
-
--- UIStroke dihapus untuk menghilangkan garis hijau sesuai permintaan
+Instance.new("UICorner", openLogo).CornerRadius = UDim.new(0, 12)
 
 -- ================= MAIN PANEL =================
 local frame = Instance.new("Frame", gui)
@@ -71,7 +128,6 @@ local xmasCountdown = Instance.new("TextLabel", infoFrame)
 xmasCountdown.Size = UDim2.new(1,0,0,25); xmasCountdown.Position = UDim2.fromOffset(0, 40); xmasCountdown.BackgroundTransparency = 1; xmasCountdown.TextColor3 = Color3.fromRGB(255,200,0); xmasCountdown.Font = Enum.Font.GothamBold; xmasCountdown.TextSize = 13
 
 -- ================= SIDE PANELS =================
--- PICK SPOT PANEL (LEFT)
 local spotFrame = Instance.new("Frame", frame)
 spotFrame.Size = UDim2.fromOffset(180, 220); spotFrame.Position = UDim2.new(0, -190, 0, 0); spotFrame.BackgroundColor3 = Color3.fromRGB(25,25,25); spotFrame.Visible = false
 Instance.new("UICorner", spotFrame).CornerRadius = UDim.new(0,8)
@@ -101,7 +157,6 @@ for name, cf in pairs(SPOTS) do
     end)
 end
 
--- PLAYER LIST PANEL (RIGHT)
 local playerListFrame = Instance.new("Frame", frame)
 playerListFrame.Size = UDim2.fromOffset(200, 300); playerListFrame.Position = UDim2.new(1, 15, 0, 0); playerListFrame.BackgroundColor3 = Color3.fromRGB(25,25,25); playerListFrame.Visible = false
 Instance.new("UICorner", playerListFrame).CornerRadius = UDim.new(0,8)
@@ -172,6 +227,7 @@ local flyBtn = createBtn("Fly: OFF")
 local noclipBtn = createBtn("Noclip: OFF")
 local tpBtn = createBtn("Teleport To Player")
 local xmasBtn = createBtn("Auto Christmas: OFF")
+local liveBtn = createBtn("Live Stats: OFF") -- TOMBOL BARU
 local spotBtn = createBtn("Pick Event Spot")
 local hideBtn = createBtn("Hide Game UI")
 
@@ -202,6 +258,12 @@ spotBtn.MouseButton1Click:Connect(function()
 end)
 xmasBtn.MouseButton1Click:Connect(function() autoXmas = not autoXmas; xmasBtn.Text = autoXmas and "Auto Christmas: ON" or "Auto Christmas: OFF" end)
 
+-- LIVE STATS TOGGLE
+liveBtn.MouseButton1Click:Connect(function()
+    liveStatsFrame.Visible = not liveStatsFrame.Visible
+    liveBtn.Text = liveStatsFrame.Visible and "Live Stats: ON" or "Live Stats: OFF"
+end)
+
 local uiHidden = false
 hideBtn.MouseButton1Click:Connect(function()
     uiHidden = not uiHidden
@@ -228,9 +290,39 @@ RunService.RenderStepped:Connect(function()
     local diff = os.time({year=t.year, month=t.month, day=t.day, hour=nextH, min=0, sec=0}) - workspace:GetServerTimeNow()
     xmasCountdown.Text = string.format("Next Event: %02d:%02d:%02d", math.floor(diff/3600), math.floor((diff%3600)/60), math.floor(diff%60))
 
+    -- UPDATE MY LIVE STATS
+    if liveStatsFrame.Visible then
+        local myStats = player:FindFirstChild("leaderstats")
+        if myStats and myStats:FindFirstChild("Caught") then
+            local current = myStats.Caught.Value
+            myExactVal.Text = "Caught: " .. formatFullNumber(current)
+            mySessionVal.Text = "Session: +" .. formatFullNumber(current - initialCaught)
+        end
+        
+        -- UPDATE SERVER TOP 5 (Setiap beberapa detik)
+        if tick() % 2 < 0.1 then -- Throttle biar ga lag
+            for _,c in pairs(serverList:GetChildren()) do if c:IsA("TextLabel") then c:Destroy() end end
+            local allPlrs = {}
+            for _,p in pairs(Players:GetPlayers()) do
+                local ps = p:FindFirstChild("leaderstats")
+                if ps and ps:FindFirstChild("Caught") then
+                    table.insert(allPlrs, {name = p.DisplayName, val = ps.Caught.Value})
+                end
+            end
+            table.sort(allPlrs, function(a,b) return a.val > b.val end)
+            for i=1, math.min(5, #allPlrs) do
+                local pData = allPlrs[i]
+                local tl = Instance.new("TextLabel", serverList)
+                tl.Size = UDim2.new(1, 0, 0, 20); tl.BackgroundTransparency = 1
+                tl.Text = string.format("%d. %s: %s", i, pData.name, formatFullNumber(pData.val))
+                tl.TextColor3 = (pData.name == player.DisplayName) and Color3.fromRGB(0,255,180) or Color3.new(1,1,1)
+                tl.Font = Enum.Font.Gotham; tl.TextSize = 10; tl.TextXAlignment = Enum.TextXAlignment.Left
+            end
+        end
+    end
+
     if fly and hrp and hrp:FindFirstChild("SoraFly") then
-        local cam = workspace.CurrentCamera
-        local dir = Vector3.zero
+        local cam = workspace.CurrentCamera; local dir = Vector3.zero
         if UIS:IsKeyDown(Enum.KeyCode.W) then dir += cam.CFrame.LookVector end
         if UIS:IsKeyDown(Enum.KeyCode.S) then dir -= cam.CFrame.LookVector end
         if UIS:IsKeyDown(Enum.KeyCode.A) then dir -= cam.CFrame.RightVector end
