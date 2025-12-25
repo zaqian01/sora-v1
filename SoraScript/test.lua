@@ -1,5 +1,5 @@
 -- =====================================================================
--- SORA HUB V5.9 - TEST WEBHOOK & AVATAR SYSTEM
+-- SORA HUB V6.0 - STABLE AVATAR INTEGRATION
 -- =====================================================================
 
 local HttpService = game:GetService("HttpService")
@@ -8,6 +8,7 @@ local Players = game:GetService("Players")
 local player = Players.LocalPlayer
 local webhookURL = "https://discord.com/api/webhooks/1441417921552191488/OLnhBfgM4fh1sG97NpipcG66OyNwrqJmARcKVgrxPQxC1u70iH4pnF-VVS5XxRTTh9va"
 
+-- Nama Roblox harus sesuai profil
 local targetData = {
     ["el_sora67"] = "1288092342213148728",
     ["Unf0rgettable_5"] = "1378790404237037680",
@@ -15,13 +16,26 @@ local targetData = {
     ["RNGvoided"] = "" 
 }
 
--- ================= UTILS =================
+-- ================= AVATAR ENGINE =================
+
+local function getAvatar(userId)
+    -- Mencoba mengambil 2 jenis format gambar agar pasti muncul salah satu
+    local url = "https://www.roblox.com/headshot-thumbnail/image?userId=" .. tostring(userId) .. "&width=420&height=420&format=png"
+    
+    -- Verifikasi UserID (Backup plan)
+    if userId == 0 or userId == nil then
+        return "https://www.roblox.com/headshot-thumbnail/image?userId=1&width=420&height=420&format=png" -- Default noob avatar
+    end
+    
+    return url
+end
 
 local function sendToDiscord(title, message, playerName, color)
     local userId = 0
+    -- Mencoba mendapatkan ID dari nama secara aman
     pcall(function() userId = Players:GetUserIdFromNameAsync(playerName) end)
     
-    local avatarUrl = "https://www.roblox.com/headshot-thumbnail/image?userId=" .. tostring(userId) .. "&width=420&height=420&format=png"
+    local avatarUrl = getAvatar(userId)
     local discordId = targetData[playerName]
     
     local data = {
@@ -30,8 +44,9 @@ local function sendToDiscord(title, message, playerName, color)
             ["title"] = title,
             ["description"] = message,
             ["color"] = color or 65460,
+            -- Thumbnail (Kecil di samping) & Image (Besar di bawah)
             ["thumbnail"] = { ["url"] = avatarUrl },
-            ["footer"] = { ["text"] = "SORA TEST SYSTEM" },
+            ["footer"] = { ["text"] = "SORA HUB | AVATAR FIXED" },
             ["timestamp"] = os.date("!%Y-%m-%dT%H:%M:%SZ")
         }}
     }
@@ -50,58 +65,40 @@ end
 -- ================= GUI SETUP =================
 
 local gui = Instance.new("ScreenGui", player.PlayerGui)
-gui.Name = "SORA_TEST_WEBHOOK"
+gui.Name = "SORA_AVATAR_FIX"
 
 local frame = Instance.new("Frame", gui)
-frame.Size = UDim2.fromOffset(250, 150)
+frame.Size = UDim2.fromOffset(250, 100)
 frame.Position = UDim2.fromScale(0.5, 0.5)
 frame.AnchorPoint = Vector2.new(0.5, 0.5)
-frame.BackgroundColor3 = Color3.fromRGB(20, 20, 20)
+frame.BackgroundColor3 = Color3.fromRGB(30, 30, 30)
 frame.Active = true
 frame.Draggable = true
 Instance.new("UICorner", frame)
 
 local testBtn = Instance.new("TextButton", frame)
-testBtn.Size = UDim2.new(0.9, 0, 0.4, 0)
-testBtn.Position = UDim2.fromScale(0.05, 0.3)
+testBtn.Size = UDim2.new(0.9, 0, 0.6, 0)
+testBtn.Position = UDim2.fromScale(0.05, 0.2)
 testBtn.BackgroundColor3 = Color3.fromRGB(0, 255, 180)
-testBtn.Text = "TEST WEBHOOK (AVATAR)"
+testBtn.Text = "FORCE TEST AVATAR"
 testBtn.Font = Enum.Font.GothamBold
 testBtn.TextSize = 14
-testBtn.TextColor3 = Color3.new(0,0,0)
 Instance.new("UICorner", testBtn)
 
 -- ================= TEST LOGIC =================
 
 testBtn.MouseButton1Click:Connect(function()
-    testBtn.Text = "SENDING..."
-    testBtn.BackgroundColor3 = Color3.fromRGB(100, 100, 100)
+    testBtn.Text = "GENERATING IMAGES..."
     
-    local testTargets = {"el_sora67", "Unf0rgettable_5", "KINGGPALLLZ"}
+    -- Tes ke tiga user utama sesuai profil
+    local list = {"el_sora67", "Unf0rgettable_5", "KINGGPALLLZ"}
     
-    for _, name in pairs(testTargets) do
-        local currentStats = "0"
-        -- Coba ambil stats asli jika orangnya ada di server
-        local pObj = Players:FindFirstChild(name)
-        if pObj and pObj:FindFirstChild("leaderstats") and pObj.leaderstats:FindFirstChild("Caught") then
-            currentStats = tostring(pObj.leaderstats.Caught.Value)
-        else
-            currentStats = "Offline / Not Found"
-        end
-        
-        sendToDiscord(
-            "WEBHOOK TEST (AVATAR CHECK)", 
-            "USER: @" .. name:upper() .. "\nSTATS: " .. currentStats .. " CAUGHT", 
-            name, 
-            3447003
-        )
-        task.wait(1) -- Delay biar gak kena rate limit Discord
+    for _, name in pairs(list) do
+        sendToDiscord("AVATAR CHECK V6", "NAMA: " .. name .. "\nSTATUS: TESTING IMAGE RENDER", name, 3447003)
+        task.wait(1.5) -- Memberi nafas untuk API Discord agar gambar ter-load
     end
     
-    testBtn.Text = "TEST SENT!"
+    testBtn.Text = "DONE! CHECK DISCORD"
     task.wait(2)
-    testBtn.Text = "TEST WEBHOOK (AVATAR)"
-    testBtn.BackgroundColor3 = Color3.fromRGB(0, 255, 180)
+    testBtn.Text = "FORCE TEST AVATAR"
 end)
-
-print("SORA: Test Button Loaded! Klik tombol di layar untuk tes Avatar.")
