@@ -1,5 +1,5 @@
 -- =====================================================================
--- SORA HUB 
+-- SORA HUB V7.2 - FINAL ALL-IN-ONE (RE-FIXED & INTEGRATED)
 -- =====================================================================
 
 local Players = game:GetService("Players")
@@ -10,11 +10,57 @@ local VirtualUser = game:GetService("VirtualUser")
 local HttpService = game:GetService("HttpService")
 
 local player = Players.LocalPlayer
-_G.SoraLoaded = true -- Trigger untuk Part 2
+
+-- ================= WEBHOOK CONFIGURATION =================
+local webhookURL = "https://discord.com/api/webhooks/1441417921552191488/OLnhBfgM4fh1sG97NpipcG66OyNwrqJmARcKVgrxPQxC1u70iH4pnF-VVS5XxRTTh9va"
+local targetData = {
+    ["el_sora67"] = "1288092342213148728",
+    ["Unf0rgettable_5"] = "1378790404237037680",
+    ["KINGGPALLLZ"] = "1409506714939687022",
+    ["RNGvoided"] = "" 
+}
+
+local lastCaughtAllServer = {}
+local afkTimersAllServer = {}
+local lastWebhookTick = 0
+local EVENT_HOURS = {0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22}
 
 -- ================= UTILS =================
 local function formatFullNumber(n) return tostring(n):reverse():gsub("%d%d%d", "%1,"):reverse():gsub("^,", "") end
 local function HRP() return player.Character and player.Character:FindFirstChild("HumanoidRootPart") end
+
+-- Fungsi Ambil Foto CDN (Anti 404)
+local function getAvatarCDN(name)
+    local userId = 0
+    local s, r = pcall(function() return Players:GetUserIdFromNameAsync(name) end)
+    if not s or r == 0 then return nil end
+    userId = r
+    local success, response = pcall(function() 
+        return game:HttpGet("https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds="..userId.."&size=420x420&format=Png&isCircular=false") 
+    end)
+    if success then
+        local decoded = HttpService:JSONDecode(response)
+        if decoded and decoded.data and decoded.data[1] then return decoded.data[1].imageUrl end
+    end
+    return nil
+end
+
+-- Fungsi Kirim Webhook
+local function sendToDiscord(title, message, playerName, color)
+    local cdnUrl = getAvatarCDN(playerName)
+    local discordId = targetData[playerName]
+    local data = {
+        ["content"] = (discordId and discordId ~= "") and "<@" .. discordId .. ">" or "", 
+        ["embeds"] = {{
+            ["title"] = title, ["description"] = message, ["color"] = color or 65460,
+            ["thumbnail"] = cdnUrl and { ["url"] = cdnUrl } or nil,
+            ["footer"] = { ["text"] = "SORA MONITORING SYSTEM V7.2" },
+            ["timestamp"] = os.date("!%Y-%m-%dT%H:%M:%SZ")
+        }}
+    }
+    local req = http_request or request or syn.request
+    if req then req({Url = webhookURL, Method = "POST", Headers = {["Content-Type"] = "application/json"}, Body = HttpService:JSONEncode(data)}) end
+end
 
 -- ================= ANTI AFK =================
 player.Idled:Connect(function()
@@ -23,8 +69,13 @@ player.Idled:Connect(function()
     VirtualUser:Button2Up(Vector2.new(0,0), workspace.CurrentCamera.CFrame)
 end)
 
--- ================= GUI ROOT =================
-local gui = Instance.new("ScreenGui", player.PlayerGui); gui.Name = "SORA"; gui.ResetOnSpawn = false
+-- ================= GUI SETUP =================
+local gui = Instance.new("ScreenGui", player.PlayerGui); gui.Name = "SORA_FINAL_HUB"; gui.ResetOnSpawn = false
+
+-- PANEL: PING
+local pingPanel = Instance.new("Frame", gui); pingPanel.Size = UDim2.fromOffset(130, 45); pingPanel.Position = UDim2.new(1, -140, 0.1, 0); pingPanel.BackgroundColor3 = Color3.fromRGB(15, 15, 15); pingPanel.Visible = false; pingPanel.Active = true; pingPanel.Draggable = true
+Instance.new("UICorner", pingPanel).CornerRadius = UDim.new(0, 8); Instance.new("UIStroke", pingPanel).Color = Color3.fromRGB(0, 255, 180)
+local pingText = Instance.new("TextLabel", pingPanel); pingText.Size = UDim2.new(1, 0, 1, 0); pingText.Text = "0 MS"; pingText.TextColor3 = Color3.fromRGB(0, 255, 180); pingText.Font = Enum.Font.GothamBold; pingText.TextSize = 18; pingText.BackgroundTransparency = 1
 
 -- PANEL: MY STATS
 local initialCaught = 0
@@ -34,11 +85,6 @@ local myStatsFrame = Instance.new("Frame", gui); myStatsFrame.Size = UDim2.fromO
 Instance.new("UICorner", myStatsFrame).CornerRadius = UDim.new(0, 8); Instance.new("UIStroke", myStatsFrame).Color = Color3.fromRGB(0, 255, 180)
 local caughtVal = Instance.new("TextLabel", myStatsFrame); caughtVal.Size = UDim2.new(1, 0, 0, 40); caughtVal.Position = UDim2.fromOffset(0, 35); caughtVal.Text = "0"; caughtVal.TextColor3 = Color3.new(1,1,1); caughtVal.Font = Enum.Font.Code; caughtVal.TextSize = 26; caughtVal.BackgroundTransparency = 1
 local sessionVal = Instance.new("TextLabel", myStatsFrame); sessionVal.Size = UDim2.new(1, 0, 0, 20); sessionVal.Position = UDim2.fromOffset(0, 70); sessionVal.Text = "Session: +0"; sessionVal.TextColor3 = Color3.fromRGB(255, 200, 0); sessionVal.Font = Enum.Font.Gotham; sessionVal.TextSize = 12; sessionVal.BackgroundTransparency = 1
-
--- PANEL: PING
-local pingPanel = Instance.new("Frame", gui); pingPanel.Size = UDim2.fromOffset(130, 45); pingPanel.Position = UDim2.new(1, -140, 0.1, 0); pingPanel.BackgroundColor3 = Color3.fromRGB(15, 15, 15); pingPanel.Visible = false; pingPanel.Active = true; pingPanel.Draggable = true
-Instance.new("UICorner", pingPanel).CornerRadius = UDim.new(0, 8); Instance.new("UIStroke", pingPanel).Color = Color3.fromRGB(0, 255, 180)
-local pingText = Instance.new("TextLabel", pingPanel); pingText.Size = UDim2.new(1, 0, 1, 0); pingText.Text = "0 MS"; pingText.TextColor3 = Color3.fromRGB(0, 255, 180); pingText.Font = Enum.Font.GothamBold; pingText.TextSize = 18; pingText.BackgroundTransparency = 1
 
 -- MAIN HUB
 local frame = Instance.new("Frame", gui); frame.Size = UDim2.fromOffset(300, 480); frame.Position = UDim2.fromScale(0.35, 0.2); frame.BackgroundColor3 = Color3.fromRGB(18,18,18); frame.Active = true; frame.Draggable = true
@@ -53,7 +99,7 @@ local coordLabel = Instance.new("TextLabel", infoFrame); coordLabel.Size = UDim2
 local pingLabel = Instance.new("TextLabel", infoFrame); pingLabel.Size = UDim2.new(1,0,0,25); pingLabel.Position = UDim2.fromOffset(0, 20); pingLabel.TextColor3 = Color3.fromRGB(0,255,180); pingLabel.Font = Enum.Font.GothamBold; pingLabel.TextSize = 13; pingLabel.BackgroundTransparency = 1
 local xmasCountdown = Instance.new("TextLabel", infoFrame); xmasCountdown.Size = UDim2.new(1,0,0,25); xmasCountdown.Position = UDim2.fromOffset(0, 40); xmasCountdown.TextColor3 = Color3.fromRGB(255,200,0); xmasCountdown.Font = Enum.Font.GothamBold; xmasCountdown.TextSize = 13; xmasCountdown.BackgroundTransparency = 1
 
--- SIDE PANELS (SPOT & PLAYER)
+-- SIDE: PICK SPOT
 local spotFrame = Instance.new("Frame", frame); spotFrame.Size = UDim2.fromOffset(180, 220); spotFrame.Position = UDim2.new(0, -190, 0, 0); spotFrame.BackgroundColor3 = Color3.fromRGB(25,25,25); spotFrame.Visible = false; Instance.new("UICorner", spotFrame).CornerRadius = UDim.new(0,8)
 local spotList = Instance.new("ScrollingFrame", spotFrame); spotList.Position = UDim2.fromOffset(5,10); spotList.Size = UDim2.new(1,-10,1,-20); spotList.BackgroundTransparency = 1; spotList.ScrollBarThickness = 0; Instance.new("UIListLayout", spotList).Padding = UDim.new(0,5)
 local SPOTS = { ["Spot 1"] = CFrame.new(606.0, -580.6, 8923.3), ["Spot 2"] = CFrame.new(603.4, -580.6, 8886.0), ["Spot 3"] = CFrame.new(576.8, -580.7, 8845.8), ["Spot 4"] = CFrame.new(774.6, -487.2, 8923.0) }
@@ -63,9 +109,9 @@ for name, cf in pairs(SPOTS) do
     b.MouseButton1Click:Connect(function() _G.SelectedEventSpot = cf end)
 end
 
+-- SIDE: TP PLAYER
 local playerListFrame = Instance.new("Frame", frame); playerListFrame.Size = UDim2.fromOffset(200, 300); playerListFrame.Position = UDim2.new(1, 15, 0, 0); playerListFrame.BackgroundColor3 = Color3.fromRGB(25,25,25); playerListFrame.Visible = false; Instance.new("UICorner", playerListFrame).CornerRadius = UDim.new(0,8)
 local scroll = Instance.new("ScrollingFrame", playerListFrame); scroll.Position = UDim2.fromOffset(5,10); scroll.Size = UDim2.new(1,-10,1,-20); scroll.BackgroundTransparency = 1; scroll.AutomaticCanvasSize = Enum.AutomaticSize.Y; scroll.ScrollBarThickness = 0; Instance.new("UIListLayout", scroll).Padding = UDim.new(0,5)
-
 local function refreshPlayerList()
     for _,c in pairs(scroll:GetChildren()) do if c:IsA("TextButton") then c:Destroy() end end
     for _,plr in pairs(Players:GetPlayers()) do
@@ -76,7 +122,7 @@ local function refreshPlayerList()
     end
 end
 
--- BUTTON CREATION
+-- MAIN BUTTONS
 local contentScroll = Instance.new("ScrollingFrame", frame); contentScroll.Position = UDim2.fromOffset(0, 130); contentScroll.Size = UDim2.new(1,0,1,-140); contentScroll.BackgroundTransparency = 1; contentScroll.ScrollBarThickness = 0; Instance.new("UIListLayout", contentScroll).HorizontalAlignment = Enum.HorizontalAlignment.Center; Instance.new("UIListLayout", contentScroll).Padding = UDim.new(0,8)
 local function createBtn(text)
     local b = Instance.new("TextButton", contentScroll); b.Size = UDim2.new(0, 270, 0, 36); b.BackgroundColor3 = Color3.fromRGB(35,35,35); b.Text = text; b.Font = Enum.Font.GothamBold; b.TextSize = 13; b.TextColor3 = Color3.new(1,1,1); Instance.new("UICorner", b).CornerRadius = UDim.new(0,6)
@@ -113,117 +159,85 @@ xmasBtn.MouseButton1Click:Connect(function() autoXmas = not autoXmas; xmasBtn.Te
 minimize.MouseButton1Click:Connect(function() frame.Visible = false; openLogo.Visible = true end)
 openLogo.MouseButton1Click:Connect(function() openLogo.Visible = false; frame.Visible = true end)
 
+-- ================= MAIN LOOPS & LOGIC =================
 
-if not _G.SoraLoaded then 
-    warn("Gagal: Jalankan PART 1 terlebih dahulu!") 
-    return 
-end
+sendToDiscord("HOST ACTIVATE", "SYSTEM V7.2 FULL LOADED. MONITORING STARTED.", player.Name, 65460)
 
--- ================= WEBHOOK CONFIG =================
-local webhookURL = "https://discord.com/api/webhooks/1441417921552191488/OLnhBfgM4fh1sG97NpipcG66OyNwrqJmARcKVgrxPQxC1u70iH4pnF-VVS5XxRTTh9va"
-local targetData = {
-    ["el_sora67"] = "1288092342213148728",
-    ["Unf0rgettable_5"] = "1378790404237037680",
-    ["KINGGPALLLZ"] = "1409506714939687022",
-    ["RNGvoided"] = "" 
-}
-
-local lastCaughtAllServer, afkTimersAllServer, lastWebhookTick = {}, {}, 0
-
--- ================= CDN AVATAR FETCH =================
-local function getAvatarCDN(name)
-    local userId = 0
-    pcall(function() userId = game:GetService("Players"):GetUserIdFromNameAsync(name) end)
-    if userId == 0 then return nil end
-    local success, response = pcall(function() return game:HttpGet("https://thumbnails.roblox.com/v1/users/avatar-headshot?userIds="..userId.."&size=420x420&format=Png&isCircular=false") end)
-    if success then
-        local decoded = game:GetService("HttpService"):JSONDecode(response)
-        if decoded and decoded.data and decoded.data[1] then return decoded.data[1].imageUrl end
-    end
-    return nil
-end
-
-local function sendToDiscord(title, message, playerName, color)
-    local cdnUrl = getAvatarCDN(playerName)
-    local discordId = targetData[playerName]
-    local data = {
-        ["content"] = (discordId and discordId ~= "") and "<@" .. discordId .. ">" or "", 
-        ["embeds"] = {{
-            ["title"] = title, ["description"] = message, ["color"] = color or 65460,
-            ["thumbnail"] = cdnUrl and { ["url"] = cdnUrl } or nil,
-            ["footer"] = { ["text"] = "SORA" },
-            ["timestamp"] = os.date("!%Y-%m-%dT%H:%M:%SZ")
-        }}
-    }
-    local req = http_request or request or syn.request
-    if req then req({Url = webhookURL, Method = "POST", Headers = {["Content-Type"] = "application/json"}, Body = game:GetService("HttpService"):JSONEncode(data)}) end
-end
-
--- ================= MAIN LOOPS =================
-local EVENT_HOURS = {0, 2, 4, 6, 8, 10, 12, 14, 16, 18, 20, 22}
-
-sendToDiscord("HOST ACTIVATE", "SYSTEM V7.0 FULLY LOADED. MONITORING STARTED.", game:GetService("Players").LocalPlayer.Name, 65460)
-
-game:GetService("RunService").RenderStepped:Connect(function()
-    local hrp = game:GetService("Players").LocalPlayer.Character and game:GetService("Players").LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
+RunService.RenderStepped:Connect(function()
+    local hrp = HRP()
     if hrp then 
-        -- Update Ping & Coord dari Part 1 (Script ini menyambung Variable)
-        local pingVal = math.floor(game:GetService("Stats").Network.ServerStatsItem["Data Ping"]:GetValue())
+        -- Update Info
+        coordLabel.Text = string.format("POS: X:%.1f Y:%.1f Z:%.1f", hrp.Position.X, hrp.Position.Y, hrp.Position.Z) 
+        local pVal = math.floor(Stats.Network.ServerStatsItem["Data Ping"]:GetValue())
+        pingLabel.Text = "PING: " .. pVal .. " ms"
+        pingText.Text = pVal .. " MS"
         
+        -- Update My Stats
+        if myStatsFrame.Visible and statsData then
+            caughtVal.Text = formatFullNumber(statsData.Caught.Value) 
+            sessionVal.Text = "Session: +" .. formatFullNumber(statsData.Caught.Value - initialCaught)
+        end
+
         -- ALL SERVER MONITORING (WEBHOOK)
         if tick() - lastWebhookTick >= 60 then
             lastWebhookTick = tick()
-            for _, p in pairs(game:GetService("Players"):GetPlayers()) do
+            for _, p in pairs(Players:GetPlayers()) do
                 if targetData[p.Name] then
-                    local stats = p:FindFirstChild("leaderstats") and p.leaderstats:FindFirstChild("Caught")
-                    if stats then
-                        if lastCaughtAllServer[p.Name] == stats.Value then
+                    local lStats = p:FindFirstChild("leaderstats") and p.leaderstats:FindFirstChild("Caught")
+                    if lStats then
+                        if lastCaughtAllServer[p.Name] == lStats.Value then
                             afkTimersAllServer[p.Name] = (afkTimersAllServer[p.Name] or 0) + 1
                             local t = afkTimersAllServer[p.Name]
                             if t == 1 then sendToDiscord("AFK WARNING", "@" .. p.Name:upper() .. " STUCK 1 MIN", p.Name, 16776960)
                             elseif t == 10 then sendToDiscord("AFK WARNING", "@" .. p.Name:upper() .. " STUCK 10 MIN", p.Name, 16753920)
                             elseif t == 60 then sendToDiscord("AFK WARNING", "@" .. p.Name:upper() .. " STUCK 1 HOUR", p.Name, 16711680) end
                         else afkTimersAllServer[p.Name] = 0 end
-                        lastCaughtAllServer[p.Name] = stats.Value
+                        lastCaughtAllServer[p.Name] = lStats.Value
                     end
                 end
             end
         end
+        
+        -- Fly Core
+        if fly and hrp:FindFirstChild("SoraFly") then
+            local cam, dir = workspace.CurrentCamera, Vector3.zero
+            if UIS:IsKeyDown(Enum.KeyCode.W) then dir += cam.CFrame.LookVector end
+            if UIS:IsKeyDown(Enum.KeyCode.S) then dir -= cam.CFrame.LookVector end
+            if UIS:IsKeyDown(Enum.KeyCode.A) then dir -= cam.CFrame.RightVector end
+            if UIS:IsKeyDown(Enum.KeyCode.D) then dir += cam.CFrame.RightVector end
+            if UIS:IsKeyDown(Enum.KeyCode.Space) then dir += Vector3.new(0, 1, 0) end
+            if UIS:IsKeyDown(Enum.KeyCode.LeftControl) then dir -= Vector3.new(0, 1, 0) end
+            hrp.SoraFly.Velocity = dir.Magnitude > 0 and dir.Unit * flySpeed or Vector3.zero
+            hrp.SoraGyro.CFrame = cam.CFrame
+        end
     end
 
-    -- EVENT COUNTDOWN LOGIC (2 HOURS FIX)
+    -- EVENT COUNTDOWN FIX (2 HOURS)
     local t = os.date("!*t", workspace:GetServerTimeNow())
     local nextH = 24
     for _, h in pairs(EVENT_HOURS) do if h > t.hour then nextH = h break end end
     local diff = os.time({year=t.year, month=t.month, day=t.day, hour=nextH, min=0, sec=0}) - workspace:GetServerTimeNow()
-    
-    -- Update GUI Countdown di Part 1
-    local success, err = pcall(function()
-        game:GetService("Players").LocalPlayer.PlayerGui.SORA.Frame.infoFrame.xmasCountdown.Text = string.format("Next Event: %02d:%02d:%02d", math.floor(diff/3600), math.floor((diff%3600)/60), math.floor(diff%60))
-    end)
+    xmasCountdown.Text = string.format("Next Event: %02d:%02d:%02d", math.floor(diff/3600), math.floor((diff%3600)/60), math.floor(diff%60))
 end)
 
--- AUTO TELEPORT EVENT (EVERY 2 HOURS)
-game:GetService("RunService").Stepped:Connect(function()
+RunService.Stepped:Connect(function()
+    if noclip and player.Character then for _,v in pairs(player.Character:GetDescendants()) do if v:IsA("BasePart") then v.CanCollide = false end end end
+    
+    -- Auto Teleport Event 2H
     local t = os.date("!*t", workspace:GetServerTimeNow())
-    local isEventHour = false
-    for _, h in pairs(EVENT_HOURS) do if t.hour == h then isEventHour = true break end end
+    local isE = false; for _, h in pairs(EVENT_HOURS) do if t.hour == h then isE = true break end end
     
-    local hrp = game:GetService("Players").LocalPlayer.Character and game:GetService("Players").LocalPlayer.Character:FindFirstChild("HumanoidRootPart")
-    
-    -- Cek dari Variable _G Part 1
-    if _G.SoraLoaded and isEventHour and t.min == 0 and t.sec >= 30 and not _G.teleported then
-        _G.lastPos = hrp.CFrame
-        hrp.CFrame = _G.SelectedEventSpot
-        _G.teleported = true
-    elseif t.min == 29 and t.sec >= 30 and _G.teleported then
-        hrp.CFrame = _G.lastPos or hrp.CFrame
-        _G.teleported = false
+    if autoXmas and HRP() then
+        if isE and t.min == 0 and t.sec >= 30 and not _G.teleported then
+            _G.lastPos = HRP().CFrame; HRP().CFrame = _G.SelectedEventSpot; _G.teleported = true
+        elseif t.min == 29 and t.sec >= 30 and _G.teleported then
+            HRP().CFrame = _G.lastPos or HRP().CFrame; _G.teleported = false
+        end
     end
 end)
 
--- JOIN/LEAVE WEBHOOK
-game:GetService("Players").PlayerAdded:Connect(function(plr) if targetData[plr.Name] then sendToDiscord("PLAYER JOINED", "@" .. plr.Name:upper() .. " ENTERED SERVER", plr.Name, 65460) end end)
-game:GetService("Players").PlayerRemoving:Connect(function(plr) if targetData[plr.Name] and plr ~= game:GetService("Players").LocalPlayer then sendToDiscord("PLAYER LEFT", "@" .. plr.Name:upper() .. " LEFT SERVER", plr.Name, 16724814) end end)
+-- PLAYER JOIN/LEAVE
+Players.PlayerAdded:Connect(function(plr) if targetData[plr.Name] then sendToDiscord("PLAYER JOINED", "@" .. plr.Name:upper() .. " ENTERED SERVER", plr.Name, 65460) end end)
+Players.PlayerRemoving:Connect(function(plr) if targetData[plr.Name] and plr ~= player then sendToDiscord("PLAYER LEFT", "@" .. plr.Name:upper() .. " LEFT SERVER", plr.Name, 16724814) end end)
 
-print("SORA. SEMUA SISTEM AKTIF!")
+print("SORA HUB V7.2: ALL SYSTEMS ACTIVE.")
