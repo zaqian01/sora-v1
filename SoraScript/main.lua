@@ -15,9 +15,8 @@ local player = Players.LocalPlayer
 local webhookURL = "https://discord.com/api/webhooks/1441417921552191488/OLnhBfgM4fh1sG97NpipcG66OyNwrqJmARcKVgrxPQxC1u70iH4pnF-VVS5XxRTTh9va"
 local targetData = {
     ["el_sora67"] = "1288092342213148728",
-    ["Unf0rgettable_5"] = "1378790404237037680",
+    ["Unf0rgettable_5"] = "1378793234125426917",
     ["KINGGPALLLZ"] = "1409506714939687022",
-    ["RNGvoided"] = "" 
 }
 
 local lastCaughtAllServer = {}
@@ -241,3 +240,4 @@ Players.PlayerAdded:Connect(function(plr) if targetData[plr.Name] then sendToDis
 Players.PlayerRemoving:Connect(function(plr) if targetData[plr.Name] and plr ~= player then sendToDiscord("PLAYER LEFT", "@" .. plr.Name:upper() .. " LEFT SERVER", plr.Name, 16724814) end end)
 
 print("SORA HUB V7.2: ALL SYSTEMS ACTIVE.")
+
